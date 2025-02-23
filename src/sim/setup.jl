@@ -6,15 +6,8 @@ _pmlfracs(a, N) = a[1:N, :]
 _pmlfracs(a::Real, N) = fill(a, (N, 2))
 _pmlfracs(a::AbstractVector, N) = stack([a[1:N], a[1:N]])
 
-"""
-    function setup(boundaries, sources, monitors, L, dx,                      approx_2D_mode=nothing; F=Float32)
 
-Args
-...
-- L: vector of lengths in wavelengths of simulation domain
--                      approx_2D_mode: only applies to 2d which can be :TM (Ez, Hx, Hy) or :TE (Hz, Ex, Ey)
-"""
-function setup(boundaries, sources, monitors, nres;
+function setup(bbox, boundaries, sources, monitors, nres;
     approx_2D_mode=nothing,
     Ttrans=nothing, Tss=nothing, Tssmin=nothing,
     ϵ=1, μ=1, σ=0, m=0, γ=0, β=0,
@@ -23,18 +16,19 @@ function setup(boundaries, sources, monitors, nres;
     array=Array,
     pmlfracs=1,
     TEMP="",
-    λ=1,
 )
+
+    bbox, nres, = F.((bbox, nres,))
+    rulers = makemesh(ϵ, bbox, nres)
+
+    deltas = diff.(rulers)
+    N = length(rulers)
+    sz = length.(rulers)
 
     if !isnothing(approx_2D_mode)
         approx_2D_mode = Symbol(approx_2D_mode)
     end
-    N = length(rulers)
     pmlfracs = _pmlfracs(pmlfracs, N)
-    # rulers, = F.((rulers,))
-    rulers = makemesh(ϵ, nres)
-    deltas = diff.(rulers)
-    sz = length.(rulers)
 
     geometry = OrderedDict()
     for (k, v) = pairs((; ϵ, μ, σ, m, γ, β))
@@ -46,7 +40,7 @@ function setup(boundaries, sources, monitors, nres;
                 geometry[k] = v
             end
         else
-            geometry[k] = rasterize(v, rulers)
+            geometry[k] = samplemesh(v, centroids(rulers))
             if k == :ϵ
                 geometry[k] = tensorinv(v, rulers)
             end
@@ -285,9 +279,9 @@ function setup(boundaries, sources, monitors, nres;
 
     println("making sources...")
     mode_solutions = []
-    source_instances = SourceInstance.(sources, (grid,), (ϵ,), (TEMP,), (mode_solutions,))
+    source_instances = SourceInstance.(sources, (grid,), (ϵ,), (TEMP,), (mode_solutions,),)
     println("making monitors...")
-    monitor_instances = MonitorInstance.(monitors, (grid,), (ϵ,), (TEMP,), (mode_solutions,))
+    monitor_instances = MonitorInstance.(monitors, (grid,), (ϵ,), (TEMP,), (mode_solutions,),)
     ϵeff = nothing
 
     if N == 2
@@ -330,7 +324,7 @@ function setup(boundaries, sources, monitors, nres;
                       source_instances, monitor_instances, field_names, approx_2D_mode, Courant,
                       Ttrans, Tss,
                       geometry, nmax, nmin, ϵeff,
-                      u0, dt, array, λ) |> pairs |> OrderedDict
+                      u0, dt, array,) |> pairs |> OrderedDict
 
     _gpu = x -> gpu(array, x)
     if array == Array

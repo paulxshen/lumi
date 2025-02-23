@@ -202,7 +202,7 @@ def stl_to_array(mesh: pv.PolyData, dl: float, bbox):
     return r
 
 
-def material_voxelate(c, dl, zmin, zmax, layers, layer_stack, path, unit=1):
+def material_voxelate(c,  zmin, zmax, layers, layer_stack, path, unit=1):
     stacks = sum([[[v.mesh_order, v.material, tuple(layer), k]
                  for k, v in get_layers(layer_stack, layer, withkey=True)] for layer in layers], [])
     c.flatten()

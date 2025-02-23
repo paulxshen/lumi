@@ -31,31 +31,22 @@ def setup(path, c, study, nres, center_wavelength,
           magic="", wd=os.path.join(os.getcwd(), "runs"), name=None,
           Ttrans=None,
           approx_2D_mode=False):
-    RATIO = 4
-
     materials = {**MATERIALS, **materials}
-    prob = dict()
+
+    prob = {
+        'nres': nres,
+        'center_wavelength': center_wavelength,
+        'name': name,
+        'path': path,
+    }
     if approx_2D_mode:
         N = 2
         prob["approx_2D_mode"] = approx_2D_mode
     else:
         N = 3
         prob["approx_2D_mode"] = None
-    dy = dx = center_wavelength/nres
-    dl = dx/RATIO
-    dz = 1 * dx
-
     prob["class"] = "pic"
     prob["Ttrans"] = Ttrans
-    prob["path"] = path
-    prob["name"] = name
-    prob["center_wavelength"] = center_wavelength
-    prob["dx"] = dx
-    prob["dy"] = dy
-    prob["dz"] = dz
-    prob["dl"] = dl
-    # ratio =
-    # prob["ratio"] = ratio
     prob["dtype"] = str(dtype)
     prob["timestamp"] = datetime.datetime.now().isoformat(
         timespec="seconds").replace(":", "-")
@@ -89,14 +80,12 @@ def setup(path, c, study, nres, center_wavelength,
 
     zmargin1 = 3*hcore
     hmode = hcore+2*zmargin1
-    hmode = trim(hmode, 2*dz)
     zmargin1 = (hmode-hcore)/2
 
     zmode = zcore-zmargin1
     zcenter = zcore+hcore/2
 
     zmargin2 = 2*hcore
-    zmargin2 = trim(zmargin2,  2*dz)
     h = hcore+2*(zmargin1+zmargin2)
     zmin = zcore-zmargin2-zmargin1
     zmax = zmin+h
@@ -120,7 +109,7 @@ def setup(path, c, study, nres, center_wavelength,
 
     source_port_margin = 3 * port_width if N == 2 else 6*port_width
 
-    port_margin = 2*dx
+    port_margin = center_wavelength/nres
     margins = []
     for p in ps:
         if set(p).intersection(source_ports):
@@ -130,20 +119,10 @@ def setup(path, c, study, nres, center_wavelength,
         else:
             assert not p
             margins.append(xmargin)
-    l0, w0 = c.bbox_np()[1]-c.bbox_np()[0]
-
-    _l = l0+margins[0]+margins[2]
-    l = trim(_l, 2*dx)
-    margins[0] += (l-_l)
-
-    _w = w0+margins[1]+margins[3]
-    w = trim(_w, 2*dy)
-    margins[1] += (w-_w)
 
     #
     modemargin = 1*port_width
     wmode = port_width+2*modemargin
-    wmode = trim(wmode, 2*dx)
     modemargin = (wmode-port_width)/2
 
     prob["hcore"] = hcore
@@ -171,31 +150,6 @@ def setup(path, c, study, nres, center_wavelength,
     # c.plot()
     # c.show()
 
-    lb = c.bbox_np()[0].tolist()
-    center = [c.bbox_np()[0][0], c.bbox_np()[0][1]+w/2, zcenter]
-
-    xs = arange(lb[0], lb[0]+l, dx)
-    ys = arange(lb[1], lb[1]+w, dy)
-    # zs = sorted(list(set(
-    #     arange(zmin, zcore-zmargin1, 4*dz) +
-    #     arange(zcore-zmargin1, zcore-2*dz, 2*dz) +
-    #     arange(zcore-2*dz, zcore+hcore+2*dz, dz) +
-    #     arange(zcore+hcore+2*dz, zcore+hcore+zmargin1, 2*dz) +
-    #     arange(zcore+hcore+zmargin1, zmax, 4*dz)
-    # )))
-    z0 = zmin
-    z1 = zmode
-    z2 = zmode+hmode
-    z3 = zmax
-    zs = sorted(list(set(
-        arange(z0, z1, 2*dz) +
-        arange(z1, z2, dz) +
-        arange(z2, z3, 2*dz)
-    )))
-    prob["xs"] = xs
-    prob["ys"] = ys
-    prob["zs"] = zs
-
     layers = set(c.layers)-set(exclude_layers)
 
     TEMP = os.path.join(path, "TEMP")
@@ -204,7 +158,7 @@ def setup(path, c, study, nres, center_wavelength,
     os.makedirs(SURFACES, exist_ok=True)
 
     layer_stack_info = material_voxelate(
-        c, dl, zmin, zmax, layers, layer_stack, SURFACES)
+        c,  zmin, zmax, layers, layer_stack, SURFACES)
     dir = os.path.dirname(os.path.realpath(__file__))
     print(dir)
     fn = os.path.join(dir, "solvemodes.py")
@@ -241,7 +195,7 @@ def setup(path, c, study, nres, center_wavelength,
     for run in runs:
         for k, v in list(run["sources"].items())+list(run["monitors"].items()):
             p = ports[k]
-            v['dimensions'] = p['dimensions']
+            v['dimensions'] = list(p['dimensions'])+[hmode]
             v['frame'] = p['frame']
             for center_wavelength in v["wavelength_mode_numbers"]:
                 wavelengths.append(center_wavelength)
@@ -251,17 +205,16 @@ def setup(path, c, study, nres, center_wavelength,
                 n = np.array(p['normal'])
                 v["center"] = (ct-n*port_margin).tolist()
             else:
-                v['center'] = p['center']
+                v['center'] = list(p['center'])
+            v['center'] += [zcenter]
 
     wavelengths = sorted(set(wavelengths))
 
     prob["mode_solutions"] = mode_solutions
     prob["runs"] = runs
-    prob["components"] = {
-        "device": {
-            "bbox": c.bbox_np().tolist(),
-        }}
     bbox = c.bbox_np().tolist()
+    bbox[0].append(zmin)
+    bbox[1].append(zmax)
 
     prob['bbox'] = bbox
     # prob['epdefault'] = materials[layer_stack['default']['material']]['epsilon']

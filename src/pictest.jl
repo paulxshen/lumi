@@ -9,10 +9,10 @@ Random.seed!(1234)
 # picrun(joinpath("runs", "mode_converter"))
 
 # picrun(joinpath("runs", "splitter"); array=cu)
-picrun(joinpath("runs", "splitter"))
+# picrun(joinpath("runs", "splitter"))
 # using GLMakie: volume
 # picrun(joinpath("build", "precompile_execution", "tiny_2_float32_CUDA"))#; framerate=10)
-# picrun(joinpath("build", "precompile_execution", "tiny_3_float32_CUDA"))
+picrun(joinpath("build", "precompile_execution", "tiny_3_float32_CUDA"))
 # picrun(joinpath("build", "precompile_execution", "tiny_3_float32_None"))
 # picrun(joinpath("build", "precompile_execution", "back_float32"))
 # picrun(joinpath("runs", "tiny3"))
@@ -30,3 +30,10 @@ picrun(joinpath("runs", "splitter"))
 #     end
 # end
 # # 
+
+# using Pkg
+# pkg"
+# dev C:\Users\pxshe\OneDrive\Desktop\beans\Porcupine.jl;
+# dev C:\Users\pxshe\OneDrive\Desktop\beans\ArrayPadding.jl;
+#  dev C:\Users\pxshe\OneDrive\Desktop\beans\Jello.jl;
+# up"

@@ -27,15 +27,12 @@ function picrun(path, array=Array; kw...)
     for (k, v) = pairs(kw)
         prob[string(k)] = v
     end
-    @unpack name, N, approx_2D_mode, dtype, center_wavelength, xmargin, ymargin, runs, ports, dl, xs, ys, zs, components, study, zmode, hmode, zmin, zmax, zcenter, magic, framerate, layer_stack, materials, Ttrans, Tss, bbox, epdefault = prob
+    @unpack name, N, approx_2D_mode, dtype, center_wavelength, runs, ports, study, zmin, zmax, zcenter, magic, framerate, layer_stack, materials, Ttrans, Tss, bbox, epdefault, nres = prob
     if study == "inverse_design"
         @unpack lsolid, lvoid, designs, targets, weights, eta, iters, restart, save_memory, design_config, stoploss = prob
     end
-    v = [xs, ys, zs]
-    global bbox = [getindex.(v, 1), getindex.(v, length.(v))]
+
     F = Float32
-    alg = :spectral
-    alg = nothing
     dtype = lowercase(dtype)
     if contains(dtype, "16") && contains(dtype, "bf")
         F = BFloat16
@@ -46,76 +43,31 @@ function picrun(path, array=Array; kw...)
         println("Float16 selected. make sure your cpu or GPU supports it. otherwise will be emulated and very slow.")
     end
     println("using $F")
+
+    bbox = stack(bbox)
+
     @show λ = center_wavelength
-    ticks = [
-        begin
-            round((v - v[1]) / dl)
-        end for v = [xs, ys, zs]
-    ]
-    spacings = diff.(ticks)
-    x = spacings[1][1]
-    spacings = [x, x, spacings[3]]
-    dx = x * dl
-    popfirst!.(ticks)
-    deltas = spacings * dl
 
-
-    ϵ2 = nothing
-    GC.gc(true)
-    if AUTODIFF()
-        Nf = F
-    else
-        # Nf = [Bool, UInt8][findfirst(>=(length(enum), 2 .^ [1, 8]))]
-        Nf = Float16
-    end
-    enum = [materials(v.material).epsilon |> F for v = values(layer_stack)] |> unique |> sort
-    ϵmin = minimum(enum) |> Nf
-
-    bbox = F.(bbox)
     layer_stack = sort(collect(pairs(layer_stack)), by=kv -> kv[2].mesh_order) |> OrderedDict
     ks = keys(layer_stack)
     fns = readdir(joinpath(path, "surfaces"), join=true)
     sort!(fns)
     @show fns
-    global meshes = getfield.(GeoIO.load.(fns, numbertype=F), :domain)
-    m = meshes[1]
-
-    # meshes = map(meshes) do m
-    #     for i = 1:12
-    #         try
-    #             m = m |> Repair(i)
-    #         catch
-    #             @show i
-    #         end
-    #     end
-    #     m
-    # end
-    # meshes = boundingbox.(meshes)
-    # global meshes = FileIO.load.(fns)
-    global eps = [materials(string(split(basename(fn), "_")[2])).epsilon |> Float16 for fn = fns]
+    global meshes = getfield.(GeoIO.load.(fns, numbertype=F), :domain) .|> Scale(1 / λ)
+    global eps = [materials(string(split(basename(fn), "_")[2])).epsilon |> F for fn = fns]
     meps = zip(meshes, eps)
-    epdefault = Float16(epdefault)
-    # start = [bbox[1]..., zmin]
-    # stop = [bbox[2]..., zmax]
-    # error()
-
-
-    # ϵ3 = permutedims(ϵ3, (2, 1, 3))
-    extrema(ϵ3) |> println
-    # using GLMakie
-    # volume(ϵ3) |> display
-    GC.gc(true)
-    # error()
+    epdefault = F(epdefault)
 
     global models = nothing
-    lb = components.device.bbox[1]
     if N == 2
         midplane = Plane((0, 0, zcenter), (0, 0, 1))
         meps = map(meps) do (m, ϵ)
             m ∩ midplane, ϵ
         end
     end
+    meps = collect(Tuple{Any,Any}, meps)
     push!(meps, (nothing, epdefault))
+    ϵ = meps
 
     if study == "inverse_design"
         targets = fmap(F, targets)
@@ -164,36 +116,20 @@ function picrun(path, array=Array; kw...)
 
     boundaries = [] # unspecified boundaries default to PML
 
-    device = 0
     λ = F(λ)
-    # guess = convert.(F,guess)
-    i = int(v2i(zmode - zmin, deltas[3]))
-    j = int(v2i(zmode + hmode - zmin, deltas[3]))
-    mode_spacings = [spacings[1][1], adddims(spacings[3][i+1:j], dims=1)]
-    plane_deltas = mode_spacings * dl
     global runs = [SortedDict([k => isa(v, AbstractDict) ? SortedDict(v) : v for (k, v) = pairs(run)]) for run in runs]
     global runs_sources = [
         begin
             sources = []
             for (port, sig) = SortedDict(run.sources) |> pairs
                 @unpack center, frame, dimensions, wavelength_mode_numbers = sig
-                if dimensions[1] isa Vector
-                    dimensions = dimensions[1]
-                end
-
-                center = (center - lb) / λ
-                dimensions /= λ
-                dimensions3 = [dimensions..., hmode / λ]
-                center3 = [center..., (zcenter - zmin) / λ]
+                center = center[1:N]
+                dimensions = dimensions[1:N-1]
                 frame = stack(frame)
-                if N == 3
-                    dimensions = dimensions3
-                    center = center3
-                end
 
-                λmodenums = SortedDict([(F(_λ) / λ) => v for (_λ, v) in pairs(wavelength_mode_numbers)])
+                λmodenums = SortedDict([(F(λ)) => v for (λ, v) in pairs(wavelength_mode_numbers)])
 
-                push!(sources, Source(center, dimensions, center3, dimensions3, frame, approx_2D_mode; λmodenums, label="s$(string(port)[2:end])"))
+                push!(sources, Source(center, dimensions, frame; λmodenums, label="s$(string(port)[2:end])"))
             end
             sources
         end for run in runs
@@ -203,37 +139,26 @@ function picrun(path, array=Array; kw...)
     global runs_monitors = [[
         begin
             @unpack center, frame, dimensions, wavelength_mode_numbers = m
-            if dimensions[1] isa Vector
-                dimensions = dimensions[1]
-            end
-
-            center = (center - lb) / λ
-            dimensions /= λ
-            dimensions3 = [dimensions..., hmode / λ]
-            center3 = [center..., (zcenter - zmin) / λ]
+            center = center[1:N]
+            dimensions = dimensions[1:N-1]
             frame = stack(frame)
-            if N == 3
-                dimensions = dimensions3
-                center = center3
-            end
 
-            λmodenums = SortedDict([(F(_λ) / λ) => v for (_λ, v) in pairs(m.wavelength_mode_numbers)])
+            λmodenums = SortedDict([F(λ) => v for (λ, v) in pairs(m.wavelength_mode_numbers)])
 
-            Monitor(center, dimensions, center3, dimensions3, frame, approx_2D_mode, ; λmodenums, label=port)
+            Monitor(center, dimensions, frame; λmodenums, label=port)
         end for (port, m) = SortedDict(run.monitors) |> pairs] for run in runs]
 
     global run_probs =
         [
             begin
-                setup(dl / λ, boundaries, sources, monitors, deltas[1:N] / λ, plane_deltas[1:N-1] / λ, ; pmlfracs=[1, 1, 0.2], approx_2D_mode, array,
-                    F, ϵ, ϵ3, deltas3=deltas / λ, λ, TEMP, Ttrans, Tss)
+                setup(bbox, boundaries, sources, monitors, nres;
+                    pmlfracs=[1, 1, 0.2], approx_2D_mode, array,
+                    F, ϵ, TEMP, Ttrans, Tss)
             end for (i, (run, sources, monitors)) in enumerate(zip(runs, runs_sources, runs_monitors))
         ]
 
     # error("not implemented")
     t0 = time()
-    lb3 = (lb..., zmin)
-    # error("not implemented")
     println("compiling simulation code...")
     if study == "sparams"
         @unpack S, sols = calc_sparams(runs, run_probs, lb, dl;

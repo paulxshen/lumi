@@ -2,29 +2,31 @@ function partition(d, nres, v)
     n = ceil(Int, d * nres * sqrt(v))
     d / n, n
 end
-function transit(a, b)
+function transit(a::T, b) where {T}
     n = ceil(Int, log(1.5, b / a))
-    r = (b / a)^(1 / n)
+    r = (b / a)^(1 / n) |> T
     a * r .^ (0:n)
 end
 
 function makemesh(mvs, bbox, nres)
+    global _sfda = mvs, bbox, nres
     N = size(bbox, 1)
-    rulers = [[(a, last(mvs)[2]), (b, nothing)] for (a, b) = eachrow(bbox)]
+    global rulers = [[(a, last(mvs)[2]), (b, nothing)] for (a, b) = eachrow(bbox)]
     for (m, v) = reverse(mvs)[2:end]
-        vs = vertices(boundarybox(m))
-        a = vs[1]
-        b = vs[end]
+        x = boundingbox(m)
+        a = ustrip.(getfield(coords(x.min), :coords))
+        b = ustrip.(getfield(coords(x.max), :coords))
         for (ruler, a, b) = zip(rulers, a, b)
             i = searchsortedfirst(ruler, a; by=first)
             j = searchsortedfirst(ruler, b; by=first)
+            _b = ruler[j][1]
             v1 = ruler[j-1][2]
             deleteat!(ruler, i:j-1)
             insert!(ruler, i, (a, v))
-            insert!(ruler, j, (b, v1))
+            b < _b && insert!(ruler, i + 1, (b, v1))
         end
     end
-    deltas = map(rulers) do ruler
+    global deltas = map(rulers) do ruler
         map(enumerate(ruler[1:end-1])) do (i, (a, v))
             b = ruler[i+1][1]
             d = b - a
@@ -43,8 +45,8 @@ function makemesh(mvs, bbox, nres)
             l = i == 1 || v >= v0
             r = i == length(ruler) - 1 || v >= v1
 
+            Δ, n = partition(d, nres, v)
             if l && r
-                Δ, n = partition(d, nres, v)
                 fill(Δ, n)
             elseif !l && !r
                 Δ0, n0 = partition(d0, nres, v0)
@@ -85,13 +87,14 @@ function makemesh(mvs, bbox, nres)
         end
     end
     map(zip(rulers, deltas)) do (r, v)
-        start = r[1]
-        [start, (start + cumsum(vcat(reduce, v)))...]
+        start = r[1][1]
+        [start, (start + cumsum(reduce(vcat, v)))...]
     end
 end
 
-function samplemesh(meshvals, rulers)
-    map(centroids(rulers)) do point
+function samplemesh(meshvals, points)
+    map(points) do point
+        point = Point(point)
         for (i, (m, v)) = enumerate(meshvals)
             if isnothing(m) || sideof(point, m) == IN
                 return v

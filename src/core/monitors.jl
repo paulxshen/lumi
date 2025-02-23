@@ -12,8 +12,12 @@ mutable struct Monitor <: AbstractMonitor
     tags
 end
 
-Monitor(center, dimensions, frame; λmodenums=nothing, λsmode=nothing, λmodes=nothing, tags...) =
+function Monitor(center, dimensions, frame, λ=1; λmodenums=nothing, λsmode=nothing, λmodes=nothing, tags...)
+    center /= λ
+    dimensions /= λ
+    λmodenums = kmap(x -> x / λ, identity, λmodenums)
     Monitor(λmodenums, λsmode, λmodes, center, dimensions, frame, tags)
+end
 
 Base.ndims(m::Monitor) = length(m.center)
 
@@ -35,12 +39,12 @@ wavelengths(m::Monitor) = keys(m.λmodes)
 
 abstract type AbstractMonitorInstance end
 mutable struct MonitorInstance <: AbstractMonitorInstance
-    inds
 
-
-    frame
-    deltas
     center
+    frame
+    I
+    plane_Is
+    plane_deltas
     λmodes
     _λmodes
     tags
@@ -52,9 +56,9 @@ wavelengths(m::MonitorInstance) = keys(m.λmodes)
 Base.length(m::MonitorInstance) = 1
 
 function MonitorInstance(m::Monitor, g, ϵ, TEMP, mode_solutions=nothing)
-    λmodes, _λmodes, inds, labelpos, = _get_λmodes(m, ϵ, TEMP, mode_solutions, g)
+    @unpack λmodes, _λmodes, plane_rulers, bbox, plane_deltas, I, plane_points, plane_Is, labelpos = _get_λmodes(m, ϵ, TEMP, mode_solutions, g)
     # println("")
-    MonitorInstance(m.frame, m.dimsperm, I, plane_Is, plane_deltas, labelpos, λmodes, _λmodes, m.tags)
+    MonitorInstance(m.center, m.frame, I, plane_Is, plane_deltas, λmodes, _λmodes, m.tags)
 end
 
 function MonitorInstance(m::PlaneMonitor, g)

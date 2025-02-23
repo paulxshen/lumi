@@ -32,8 +32,13 @@ mutable struct Source
     tags
 end
 
-Source(center, dimensions, frame; λmodenums=nothing, λsmode=nothing, λmodes=nothing, tags...) =
+function Source(center, dimensions, frame, λ=1; λmodenums=nothing, λsmode=nothing, λmodes=nothing, tags...)
+    center /= λ
+    dimensions /= λ
+    λmodenums = kmap(x -> x / λ, identity, λmodenums)
+
     Source(λmodenums, λsmode, λmodes, center, dimensions, frame, tags)
+end
 
 Base.ndims(m::Source) = length(m.center)
 # isortho(m::Source) = !isnothing(m.dimsperm)
@@ -125,7 +130,8 @@ function SourceInstance(s::Source, g, ϵ, TEMP, mode_solutions=nothing)
     N = ndims(s)
     ϵeff = nothing
 
-    λmodes, _λmodes, plane_rulers, bbox, plane_deltas, I, plane_points, labelpos = _get_λmodes(s, ϵ, TEMP, mode_solutions, g)
+    @unpack λmodes, _λmodes, plane_rulers, bbox, plane_deltas, I, plane_points, plane_Is, labelpos =
+        _get_λmodes(s, ϵ, TEMP, mode_solutions, g)
     # global _a = λmodes
 
     λs = @ignore_derivatives Array(keys(λmodes))
