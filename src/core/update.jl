@@ -2,7 +2,7 @@
 
 Updates fields. 
 """
-function update(u, p, t, dt, field_diffdeltas, field_diffpadvals, source_instances)
+function update(u, p, t, dt, diffdeltas, diffpadvals, source_instances)
     # unpack fields and geometry
     @unpack E, H = u
     @unpack m, σ, invϵ, invμ = p
@@ -20,11 +20,11 @@ function update(u, p, t, dt, field_diffdeltas, field_diffpadvals, source_instanc
     # γm = [p("γ$k") for k = poles]
     # βm = [p("β$k") for k = poles]
 
-    @nograd t, dt, field_diffdeltas, field_diffpadvals, source_instances, σ, m, invμ
+    @nograd t, dt, diffdeltas, diffpadvals, source_instances, σ, m, invμ
     N = ndims(E(1))
 
     # staggered grid housekeeping
-    ∇ = Del(field_diffdeltas, field_diffpadvals)
+    ∇ = Del(diffdeltas, diffpadvals)
 
     # inject sources
     Js = sum([s(t) for s = source_instances])

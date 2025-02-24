@@ -50,14 +50,14 @@ mutable struct MonitorInstance <: AbstractMonitorInstance
     _λmodes
     tags
 end
-@functor MonitorInstance (λmodes, _λmodes, deltas)
+@functor MonitorInstance (λmodes, _λmodes, plane_deltas)
 Base.ndims(m::MonitorInstance) = length(m.center)
 area(m::MonitorInstance) = m.v
 wavelengths(m::MonitorInstance) = keys(m.λmodes)
 Base.length(m::MonitorInstance) = 1
 
 function MonitorInstance(m::Monitor, g, ϵ, TEMP, mode_solutions=nothing)
-    @unpack λmodes, _λmodes, box_rulers, bbox, box_deltas, I, plane_points, plane_Is, labelpos = _get_λmodes(m, ϵ, TEMP, mode_solutions, g)
+    @unpack λmodes, _λmodes, box_rulers, bbox, box_deltas, I, plane_deltas, plane_points, plane_Is, labelpos = _get_λmodes(m, ϵ, TEMP, mode_solutions, g)
     # println("")
     MonitorInstance(m.center, m.frame, I, box_deltas, plane_Is, plane_deltas, λmodes, _λmodes, m.tags)
 end

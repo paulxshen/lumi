@@ -39,6 +39,9 @@ function setup(bbox, boundaries, sources, monitors, nres;
                 geometry[k] = [fill(v, sz)]
             else
                 geometry[k] = v
+                if k == :μ
+                    geometry[:invμ] = 1 / v
+                end
             end
         else
             geometry[k] = tensorinv(v, rulers)
@@ -82,7 +85,7 @@ function setup(bbox, boundaries, sources, monitors, nres;
     @show σpml
     @show pml_depths
 
-    geometry_names = (:ϵ, :μ, :σ, :m)
+    geometry_names = (:ϵ, :μ, :σ, :m, :invϵ, :invμ)
     if N == 1
         field_names = (:Ez, :Hy)
     elseif N == 2
@@ -126,8 +129,7 @@ function setup(bbox, boundaries, sources, monitors, nres;
         (geometry_names .=> (zeroarray(),))...
     ])
 
-    is_field_on_lb = OrderedDict([k => zeros(Int, N) for k = field_names])
-    is_field_on_ub = OrderedDict([k => zeros(Int, N) for k = field_names])
+    edges = OrderedDict([k => zeros(Bool, N, 2) for k = field_names])
 
     for b = boundaries
         for i = b.dims
@@ -207,7 +209,7 @@ function setup(bbox, boundaries, sources, monitors, nres;
                     padamts[k][i, j] = npml
                 end
 
-                for k = (:ϵ, :μ)
+                for k = (:ϵ, :μ, :invϵ, :invμ)
                     padvals[k][i, j] = :replicate
                 end
                 padvals[:σ][i, j] = TanhRamp(b.σ)
@@ -235,8 +237,7 @@ function setup(bbox, boundaries, sources, monitors, nres;
 
 
     for (k, v) = pairs(boundvals)
-        is_field_on_lb[k] = !isnothing.(v[:, 1])
-        is_field_on_ub[k] = !isnothing.(v[:, 2])
+        edges[k] = !isnothing.(v)
     end
 
     add_current_keys!(sizes)
@@ -254,19 +255,18 @@ function setup(bbox, boundaries, sources, monitors, nres;
     add_current_keys!(u0)
     u0 = groupkeys(u0)
 
+    add_current_keys!(edges)
     offsets = OrderedDict([
         begin
             # xyz = f[2]
             # terminations = zip(is_field_on_lb[f], is_field_on_ub[f])
             # g = Symbol("$(k)$xyz$xyz")
-            l = -is_field_on_lb[f] / 2
+            l = -edges[f][:, 1] / 2
             f => [l l]
-        end for f = field_names
-    ])
-    add_current_keys!(offsets)
+        end for f = keys(edges)])
 
     diffpadvals = kmap(a -> reverse(a, dims=2), boundvals)
-    # diffpadvals = refactor(diffpadvals)
+    diffpadvals = refactor(diffpadvals)
 
     rulers = OrderedDict([
         :default => rulers,
@@ -284,9 +284,26 @@ function setup(bbox, boundaries, sources, monitors, nres;
     deltas = kmap(rulers) do vs
         diff.(vs)
     end
+    diffdeltas = OrderedDict([
+        k => begin
+            vs = centroids.(vs)
+            sz = length.(vs)
+            N = length(vs)
+            map(1:N, vs, eachrow(edges[k])) do i, v, (l, r)
+                s = i .== (1:N)
+                v = diff(v)
+                if !l
+                    pushfirst!(v, first(v))
+                end
+                if !r
+                    push!(v, last(v))
+                end
+                repeat(v, (s + sz .* .!s)...)
+            end
+        end for (k, vs) = pairs(rulers)])
     dx = F(1 / nres / nmax)
     sizes = kmap(Tuple, sizes)
-    grid = (; rulers, deltas, sizes, offsets, boundvals, diffpadvals, padvals, padamts, F, field_names, dx)
+    grid = (; rulers, deltas, sizes, offsets, boundvals, diffpadvals, diffdeltas, padvals, padamts, F, N, field_names, dx) |> pairs |> OrderedDict
 
     println("making sources...")
     mode_solutions = []
@@ -298,14 +315,14 @@ function setup(bbox, boundaries, sources, monitors, nres;
     if N == 2
         # geometry[:ϵ] = downsample(_geometry.ϵ, int(deltas / dl))
     end
-
+    dimensions = last.(rulers.default) - first.(rulers.default)
     if !isa(Ttrans, Real)
         if endswith(string(Ttrans), "x")
             Ttrans = parse(F, Ttrans[1:end-1])
         else
             Ttrans = 1
         end
-        Ttrans *= sum(L * nmax)
+        Ttrans *= sum(dimensions * nmax)
     end
 
     if Tss == nothing
@@ -330,11 +347,12 @@ function setup(bbox, boundaries, sources, monitors, nres;
 
     @show Ttrans, Tss
     Ttrans, Tss = convert.(F, (Ttrans, Tss))
+    geometry = pad_geometry(geometry, padvals, padamts)
     global prob = (;
                       grid,
                       source_instances, monitor_instances, field_names, approx_2D_mode, Courant,
                       Ttrans, Tss,
-                      geometry, nmax, nmin, ϵeff,
+                      geometry, nmax, nmin,
                       u0, dt, array,) |> pairs |> OrderedDict
 
     _gpu = x -> gpu(array, x)
@@ -343,16 +361,15 @@ function setup(bbox, boundaries, sources, monitors, nres;
     else
         println("using GPU backend.")
     end
-    for k in (:u0, :_geometry, :geometry, :source_instances, :monitor_instances)
+    for k in (:u0, :geometry, :source_instances, :monitor_instances)
         prob[k] = _gpu(prob[k],)
     end
     for k = [:diffdeltas]
         prob.grid[k] = _gpu.(prob.grid[k])
     end
 
-    geometry = pad_geometry(geometry, padvals, padamts)
 
-    p = fmap(array, p, AbstractArray{<:Number})
+    # p = fmap(array, p, AbstractArray{<:Number})
 
     prob
 end

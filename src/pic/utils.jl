@@ -36,7 +36,7 @@ function lastrun(name=nothing; study=nothing, wd=joinpath(pwd(), "runs"))
     return p
 end
 
-function calc_sparams(runs, run_probs, lb, dl,
+function calc_sparams(runs, run_probs,
     designs=nothing, design_config=nothing, models=nothing; materials=nothing,
     alg=nothing, save_memory=false, verbose=false, perturb=nothing, framerate=0, path="", kw...)
     F = run_probs[1].grid.F
@@ -54,10 +54,10 @@ function calc_sparams(runs, run_probs, lb, dl,
             if !isnothing(models)
 
                 # @unpack ϵeff, _geometry = prob
-                @unpack _geometry = prob
-                prob[:_geometry] = make_geometry(masks, margins, lb, dl, _geometry, designs, design_config, materials; F, perturb,)# ϵeff)
+                @unpack geometry = prob
+                prob[:geometry] = make_geometry(masks, margins, geometry, designs, design_config, materials; F, perturb,)# ϵeff)
             end
-            solve(prob; alg, save_memory, verbose, framerate, path)
+            solve(prob; save_memory, verbose, framerate, path)
         end for (i, prob) in enumerate(run_probs)
     ]
 

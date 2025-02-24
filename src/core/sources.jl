@@ -257,6 +257,7 @@ function _get_λmodes(s, ϵ, TEMP, mode_solutions, g)
         global plane_Is = map(plane_points) do p
             indexof.(box_rulers, p)
         end
+        plane_deltas = dx
 
         global ϵmode = samplemesh(ϵ, plane_points .+ (bbox[:, 1],)) .|> F
         λmodes = OrderedDict([λ => begin

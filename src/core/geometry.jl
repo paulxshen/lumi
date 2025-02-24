@@ -21,12 +21,14 @@ function apply_subpixel_averaging(geometry, field_lims)
 end
 
 pad_geometry(geometry::Number, args...) = geometry
-function pad_geometry(geometry, geometry_padvals, geometry_padamts, ratio=1)
+function pad_geometry(geometry, geometry_padvals, geometry_padamts)
     namedtuple([
         k => begin
             a = geometry[k]
-            if isa(a, AbstractArray) && k in keys(geometry_padvals) && k in keys(geometry_padamts)
-                pad(a, geometry_padvals[k][1], eachcol(geometry_padamts[k] .* ratio)...)
+            if isa(a, AbstractVector) && k in keys(geometry_padvals) && k in keys(geometry_padamts)
+                map(a) do a
+                    pad(a, geometry_padvals[k][1], eachcol(geometry_padamts[k])...)
+                end
             else
                 a
             end
