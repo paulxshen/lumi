@@ -46,14 +46,14 @@ function picrun(path, array=Array; kw...)
 
     bbox = stack(bbox)
 
-    @show λ = center_wavelength
+    @show λ = F(center_wavelength)
 
     layer_stack = sort(collect(pairs(layer_stack)), by=kv -> kv[2].mesh_order) |> OrderedDict
     ks = keys(layer_stack)
     fns = readdir(joinpath(path, "surfaces"), join=true)
     sort!(fns)
     @show fns
-    global meshes = getfield.(GeoIO.load.(fns, numbertype=F), :domain) .|> Scale(1 / λ)
+    global meshes = getfield.(GeoIO.load.(fns, numbertype=F), :domain) .|> (Scale(1 / λ, 1 / λ, 1 / λ,),)
     global eps = [materials(string(split(basename(fn), "_")[2])).epsilon |> F for fn = fns]
     meps = zip(meshes, eps)
     epdefault = F(epdefault)
@@ -129,7 +129,7 @@ function picrun(path, array=Array; kw...)
 
                 λmodenums = SortedDict([(F(λ)) => v for (λ, v) in pairs(wavelength_mode_numbers)])
 
-                push!(sources, Source(center, dimensions, frame; λmodenums, label="s$(string(port)[2:end])"))
+                push!(sources, Source(center, dimensions, frame, λ; λmodenums, label="s$(string(port)[2:end])"))
             end
             sources
         end for run in runs
@@ -145,13 +145,13 @@ function picrun(path, array=Array; kw...)
 
             λmodenums = SortedDict([F(λ) => v for (λ, v) in pairs(m.wavelength_mode_numbers)])
 
-            Monitor(center, dimensions, frame; λmodenums, label=port)
+            Monitor(center, dimensions, frame, λ; λmodenums, label=port)
         end for (port, m) = SortedDict(run.monitors) |> pairs] for run in runs]
 
     global run_probs =
         [
             begin
-                setup(bbox, boundaries, sources, monitors, nres;
+                setup(bbox / λ, boundaries, sources, monitors, nres;
                     pmlfracs=[1, 1, 0.2], approx_2D_mode, array,
                     F, ϵ, TEMP, Ttrans, Tss)
             end for (i, (run, sources, monitors)) in enumerate(zip(runs, runs_sources, runs_monitors))

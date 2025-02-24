@@ -73,11 +73,9 @@ def make_pic_sim_problem(path, c: gf.Component, nres,
                     "sources": {
                         i: {
                             "wavelength_mode_numbers": {w: [mi] for w in wavelengths},
-                            "port": i,
                         }},
                     "monitors": {
                         o: {
-                            "port": o,
                             "wavelength_mode_numbers": {w: list(range(imow[i][mi][o]+1)) for w in wavelengths},
                         } for o in imow[i][mi]}}
                 d["sources"] = SortedDict(d["sources"])

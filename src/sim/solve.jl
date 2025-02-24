@@ -44,12 +44,10 @@ function solve(prob, ;
     save_memory=false, ulims=(-3, 3), framerate=nothing, showfield=:Hz, path="", #subpixel=true,
     kwargs...)
     @unpack approx_2D_mode, dt, u0, geometry, _geometry, source_instances, monitor_instances, Ttrans, Tss, ϵeff, array = prob
-    @unpack plane_deltas, F, N, sz, deltas, field_diffdeltas, field_diffpadvals, field_lims, dl, spacings, geometry_padvals, geometry_padamts, _geometry_padamts = prob.grid
 
-    @nograd plane_deltas, dt, u0, source_instances, monitor_instances, Ttrans, Tss, ϵeff, F, N, sz, deltas, field_diffdeltas, field_diffpadvals, field_lims, dl, spacings, geometry_padvals, geometry_padamts, _geometry_padamts
+    @nograd dt, u0, source_instances, monitor_instances, Ttrans, Tss, ϵeff, F, N
 
     p = geometry
-    _p = _geometry
 
     TEMP = joinpath(path, "temp")
     FIELDS = joinpath(path, "temp", "fields")
@@ -60,33 +58,6 @@ function solve(prob, ;
         npzwrite(joinpath(TEMP, "g.npy"), prob._geometry.ϵ)
     end
 
-    println("preprocessing geometry...")
-    p = pad_geometry(p, geometry_padvals, geometry_padamts)
-    p = apply_subpixel_averaging(p, field_lims)
-
-    _p = pad_geometry(_p, geometry_padvals, _geometry_padamts)
-    ks = filter(k -> k != (:ϵ), keys(_p))
-    if !isempty(ks)
-        p1 = namedtuple([k => downsamplefield(_p[k] |> cpu, field_lims, spacings) for k = ks])
-        p = merge(p, p1)
-    end
-
-    mesheps = _p.ϵ |> cpu
-    _pec = mesheps .>= (PECVAL - TOL)
-    if !any(_pec)
-        println("no PEC regions found in geometry")
-        invϵ = tensorinv(mesheps, field_lims, spacings)
-        @assert eltype(eltype(invϵ)) == F
-    else
-        # global mesheps = pecfy(mesheps, _pec, field_lims, spacings)
-        ϵ = downsamplefield(mesheps, field_lims, spacings)
-        invϵ = map(ϵ) do a
-            1 ./ a
-        end
-    end
-    invμ = 1
-    p = merge(p, (; invϵ, invμ))
-    p = fmap(array, p, AbstractArray{<:Number})
 
     # @ignore_derivatives @show typeof(invϵ)
     # return sum(invϵ) |> sum
@@ -171,12 +142,11 @@ function solve(prob, ;
             um = localframe(um, m)
             ap = am = nothing
             if !isnothing(m.λmodes)
-                md = first.(plane_deltas)
                 modes = m.λmodes[λ]
                 _modes = m._λmodes[λ]
                 @nograd modes, _modes, md
-                ap = inner.(modes, (um,), (md,))
-                am = inner.(_modes, (um,), (md,))
+                ap = inner.(modes, (um,), (m.plane_deltas,))
+                am = inner.(_modes, (um,), (m.plane_deltas,))
             end
 
             um, ap, am

@@ -79,7 +79,7 @@ function tensorinv(a::AbstractArray{T}, field_lims, spacings) where {T}
     [j <= i ? v[i][j] : v[j][i] for i = 1:N, j = 1:N]
 end
 
-function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers)
+function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=false)
     N = length(rulers)
     ns = length.(rulers)
     default = meshvals[end][2]
@@ -88,16 +88,20 @@ function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers)
         stop = getindex.(rulers, I .+ 1)
         Δ = stop - start
 
-        start -= Δ / 2
-        stop += Δ / 2
+        start -= Δ / 4
+        stop += Δ / 4
         start .= max.(start, first.(rulers))
         stop .= min.(stop, last.(rulers))
+        center = (start + stop) / 2
 
-        box = Box(Point(start...), Point(stop...))
-        point = centroid(box)
+        # box = Box(Point(start...), Point(stop...))
+        start = Point(start...)
+        stop = Point(stop...)
+        point = Point(center...)
         hits = fill(false, length(meshvals))
         for (i, (m, v)) = enumerate(meshvals)
-            if !isnothing(m) && intersects(box, m)
+            # if !isnothing(m) && intersects(box, m)
+            if !isnothing(m) && xor(sideof(start, m) != OUT, sideof(stop, m) != OUT)
                 hits[i] = true
             elseif isnothing(m) || sideof(point, m) == IN
                 return v
@@ -105,7 +109,6 @@ function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers)
         end
 
         if any(hits)
-
             n = 4
             δ = Δ / n
             a = map(Base.product(range.(start + δ / 2, stop - δ / 2, n)...)) do p
@@ -115,22 +118,30 @@ function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers)
                 default
             end
 
-            n = imnormal(a)
-            P = n * n'
-            P * mean(1 ./ a) + (LinearAlgebra.I - P) / mean(a)
+            if tensor && inv
+                n = imnormal(a)
+                P = n * n'
+                P * mean(1 ./ a) + (LinearAlgebra.I - P) / mean(a)
+            elseif !tensor && !inv
+                mean(a)
+            end
         else
             default
         end
     end
 
-    v = map(1:N) do i
-        map(1:i) do j
-            map(a) do v
-                v(i, j)
+    if tensor && inv
+        v = map(1:N) do i
+            map(1:i) do j
+                map(a) do v
+                    v(i, j)
+                end
             end
         end
+        [j <= i ? v[i][j] : v[j][i] for i = 1:N, j = 1:N]
+    elseif !tensor && !inv
+        a
     end
-    [j <= i ? v[i][j] : v[j][i] for i = 1:N, j = 1:N]
 end
 
 function downsamplefield(a::AbstractArray{T}, field_lims, spacings) where {T}

@@ -23,7 +23,7 @@ function setup(bbox, boundaries, sources, monitors, nres;
 
     deltas = diff.(rulers)
     N = length(rulers)
-    sz = length.(rulers)
+    sz = Tuple(length.(rulers))
 
     if !isnothing(approx_2D_mode)
         approx_2D_mode = Symbol(approx_2D_mode)
@@ -31,24 +31,39 @@ function setup(bbox, boundaries, sources, monitors, nres;
     pmlfracs = _pmlfracs(pmlfracs, N)
 
     geometry = OrderedDict()
+    println("preprocessing geometry...")
     for (k, v) = pairs((; ϵ, μ, σ, m, γ, β))
         if isa(v, Number)
             v = F(v)
             if k ∈ (:σ, :m)
-                geometry[k] = fill(v, sz)
+                geometry[k] = [fill(v, sz)]
             else
                 geometry[k] = v
             end
         else
-            geometry[k] = samplemesh(v, centroids(rulers))
+            geometry[k] = tensorinv(v, rulers)
             if k == :ϵ
-                geometry[k] = tensorinv(v, rulers)
+                haspec = any(>=(PECVAL), last.(ϵ[1:end-1]))
+                if !haspec
+                    println("no PEC regions found in geometry")
+                    geometry[:invϵ] = tensorinv(v, rulers; tensor=true, inv=true)
+                else
+                    geometry[:invϵ] = map(geometry[:ϵ][1]) do a
+                        1 ./ a
+                    end
+                end
+            elseif k == :μ
+                geometry[:invμ] = map(geometry[:μ][1]) do a
+                    1 ./ a
+                end
             end
         end
     end
 
-    ϵmin, ϵmax = extrema(abs, geometry.ϵ)
-    μmin, μmax = extrema(abs, geometry.μ)
+    a = geometry.ϵ[1]
+    # a[a.>100]
+    ϵmin, ϵmax = extrema(abs.(a))
+    μmin, μmax = extrema(abs.(geometry.μ))
     nmax = sqrt(ϵmax * μmax)
     nmin = sqrt(ϵmin * μmin)
 
@@ -95,20 +110,20 @@ function setup(bbox, boundaries, sources, monitors, nres;
     offsets = OrderedDict()
     sizes = OrderedDict([
         :default => collect(sz),
-        (field_names .=> collect(sz))...
+        (field_names .=> (collect(sz),))...
     ])
     boundvals = OrderedDict([
         :default => zeroarray(),
-        (field_names .=> nothingarray())...
+        (field_names .=> (nothingarray(),))...
     ])
     # 
     padvals = OrderedDict([
         :default => nothingarray(),
-        (geometry_names .=> nothingarray())...
+        (geometry_names .=> (nothingarray(),))...
     ])
     padamts = OrderedDict([
         :default => zeroarray(),
-        (geometry_names .=> zeroarray())...
+        (geometry_names .=> (zeroarray(),))...
     ])
 
     is_field_on_lb = OrderedDict([k => zeros(Int, N) for k = field_names])
@@ -181,10 +196,10 @@ function setup(bbox, boundaries, sources, monitors, nres;
                 v = maxdeltas[i] * (1:npml)
                 if j == 1
                     # pushfirst!(deltas[i], fill(maxdeltas[i], npml)...)
-                    pushfirst!(rulers[i], rulers[i][1] - v)
+                    prepend!(rulers[i], rulers[i][1] - v)
                 else
                     # push!(deltas[i], fill(maxdeltas[i], npml)...)
-                    push!(rulers[i], rulers[i][end] + v)
+                    append!(rulers[i], rulers[i][end] + v)
                 end
 
                 padamts.default[i, j] = npml
@@ -239,22 +254,15 @@ function setup(bbox, boundaries, sources, monitors, nres;
     add_current_keys!(u0)
     u0 = groupkeys(u0)
 
-    for k = geometry_names
-        if k in (:μ, :m)
-            names = Hnames
-        elseif k in (:ϵ, :σ)
-            names = Enames
-        end
-        v = NamedTuple([
-            begin
-                xyz = f[2]
-                terminations = zip(is_field_on_lb[f], is_field_on_ub[f])
-                g = Symbol("$(k)$xyz$xyz")
-                f => [-is_field_on_lb[f] is_field_on_ub[f]] / 2
-            end for f = names
-        ])
-        offsets[k] = v
-    end
+    offsets = OrderedDict([
+        begin
+            # xyz = f[2]
+            # terminations = zip(is_field_on_lb[f], is_field_on_ub[f])
+            # g = Symbol("$(k)$xyz$xyz")
+            l = -is_field_on_lb[f] / 2
+            f => [l l]
+        end for f = field_names
+    ])
     add_current_keys!(offsets)
 
     diffpadvals = kmap(a -> reverse(a, dims=2), boundvals)
@@ -263,19 +271,22 @@ function setup(bbox, boundaries, sources, monitors, nres;
     rulers = OrderedDict([
         :default => rulers,
         begin
-            rulers = map(rulers) do v
+            d = map(rulers) do v
                 vcat([2v[1] - v[2]], v, [2v[end] - v[end-1]])
             end
             map(pairs(offsets)) do (k, v)
                 start = 2 + v[:, 1]
                 stop = 1 + length.(rulers) + v[:, 2]
-                k => getindexf.(rulers, range.(start, stop))
+                k => getindexf.(d, range.(start, stop))
             end
         end...
     ])
-    deltas = diff.(rulers)
-
-    grid = (; rulers, deltas, sizes, offsets, boundvals, diffpadvals, padvals, padamts)
+    deltas = kmap(rulers) do vs
+        diff.(vs)
+    end
+    dx = F(1 / nres / nmax)
+    sizes = kmap(Tuple, sizes)
+    grid = (; rulers, deltas, sizes, offsets, boundvals, diffpadvals, padvals, padamts, F, field_names, dx)
 
     println("making sources...")
     mode_solutions = []
@@ -338,6 +349,11 @@ function setup(bbox, boundaries, sources, monitors, nres;
     for k = [:diffdeltas]
         prob.grid[k] = _gpu.(prob.grid[k])
     end
+
+    geometry = pad_geometry(geometry, padvals, padamts)
+
+    p = fmap(array, p, AbstractArray{<:Number})
+
     prob
 end
 update = update

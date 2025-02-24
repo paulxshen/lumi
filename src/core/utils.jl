@@ -72,13 +72,13 @@ function groupkeys(d)
 end
 
 _make_field_deltas(d::Real, a...) = d
-function _make_field_deltas(d, N, field_boundvals, field_sizes, i, isdiff=false)
+function _make_field_deltas(d, N, field_boundvals, sizes, i, isdiff=false)
     NamedTuple([k => begin
         if isdiff * isnothing(v[i, 1])
             d = vcat(d[1], (d[1:end-1] .+ d[2:end]) ./ 2)
         end
         sel = i .== 1:N
-        reshape(d, Tuple(1 - sel + field_sizes[k][i] * sel))
+        reshape(d, Tuple(1 - sel + sizes[k][i] * sel))
     end for (k, v) = pairs(field_boundvals)])
 end
 function cluster(v)

@@ -19,11 +19,14 @@ function makemesh(mvs, bbox, nres)
         for (ruler, a, b) = zip(rulers, a, b)
             i = searchsortedfirst(ruler, a; by=first)
             j = searchsortedfirst(ruler, b; by=first)
-            _b = ruler[j][1]
-            v1 = ruler[j-1][2]
-            deleteat!(ruler, i:j-1)
-            insert!(ruler, i, (a, v))
-            b < _b && insert!(ruler, i + 1, (b, v1))
+            if i <= length(ruler)
+                j = min(j, length(ruler))
+                _b = ruler[j][1]
+                v1 = ruler[j-1][2]
+                deleteat!(ruler, i:j-1)
+                insert!(ruler, i, (a, v))
+                b < _b && insert!(ruler, i + 1, (b, v1))
+            end
         end
     end
     global deltas = map(rulers) do ruler
@@ -94,7 +97,7 @@ end
 
 function samplemesh(meshvals, points)
     map(points) do point
-        point = Point(point)
+        point = Point(point...)
         for (i, (m, v)) = enumerate(meshvals)
             if isnothing(m) || sideof(point, m) == IN
                 return v

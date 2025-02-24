@@ -124,13 +124,13 @@ function SourceInstance(s::PlaneWave, g)
 end
 
 function SourceInstance(s::Source, g, ϵ, TEMP, mode_solutions=nothing)
-    @unpack dimsperm, tags = s
-    @unpack F, field_sizes = g
+    @unpack tags = s
+    @unpack F, sizes = g
     C = complex(F)
     N = ndims(s)
     ϵeff = nothing
 
-    @unpack λmodes, _λmodes, plane_rulers, bbox, plane_deltas, I, plane_points, plane_Is, labelpos =
+    @unpack λmodes, _λmodes, box_rulers, bbox, box_deltas, I, plane_points, plane_Is, labelpos =
         _get_λmodes(s, ϵ, TEMP, mode_solutions, g)
     # global _a = λmodes
 
@@ -165,29 +165,28 @@ function SourceInstance(s::Source, g, ϵ, TEMP, mode_solutions=nothing)
 
             mode = OrderedDict([
                 begin
-                    a = zeros(F, length.(plane_deltas))
+                    a = zeros(C, length.(box_deltas)...)
                     for (p, v) = zip(plane_points, v)
-                        I = indexof.(plane_rulers, p) - F(0.5)
+                        I = indexof.(box_rulers, p) - F(0.5)
+                        I = max.(I, 1)
+                        I = min.(I, size(a))
                         place!(a, v, I)
                     end
                     k => a
                 end for (k, v) = pairs(mode)])
             mode = completexyz(mode, N)
-            # ks = sort([k for k = keys(mode) if string(k)[end] in "xyz"[1:N]])
-            # println(ks)
+
             mode = namedtuple([
                 begin
                     v = mode(k)
                     @assert !any(isnan, v)
 
                     if all(iszero, v)
-                        v = 0
+                        a = 0
                     else
-                        a = zeros(C, field_sizes[k])
-                        place!(a, v, first.(I[k]))
-                        v = a
+                        a = zeros(C, sizes[k])
+                        place!(a, v, first.(I))
                     end
-                    @assert !any(isnan, v)
                     k => v
                 end for k = sort(keys(mode))])
 
@@ -218,23 +217,27 @@ end
 
 function _get_λmodes(s, ϵ, TEMP, mode_solutions, g)
     @unpack center, dimensions, tags, frame, λmodenums, λmodes, λsmode = s
-    @unpack F, deltas, deltas3, field_sizes, field_lims, mode_spacing, spacings, dl, padamts = g
+    @unpack F, sizes, rulers, field_names, offsets, dx = g
     N = ndims(s)
 
     C = complex(g.F)
 
     if isa(s, Source)
-        ks = [k for k = keys(field_lims) if string(k)[1] ∈ ('J')]
+        ks = [k for k = field_names if string(k)[1] ∈ ('J')]
     elseif isa(s, Monitor)
-        ks = [k for k = keys(field_lims) if string(k)[1] ∈ ('E', 'H')]
+        ks = [k for k = field_names if string(k)[1] ∈ ('E', 'H')]
     end
 
-    start = floor.(Int, indexof.(rulers, center - dimensions / 2))
-    stop = ceil.(Int, indexof.(rulers, center + dimensions / 2))
+    v = frame * [dimensions..., 0]
+    rulers = rulers[:default]
+    # global _aaaaaaaaa = center, v, rulers, s
+    start = signedfloor.(indexof.(rulers, center - v / 2))
+    stop = signedceil.(indexof.(rulers, center + v / 2))
     bbox = [getindex.(rulers, start) getindex.(rulers, stop)]
 
-    plane_rulers = getindex.(rulers, range.(start, stop))
-    plane_deltas = diff.(plane_rulers)
+    start, stop = min.(start, stop), max.(start, stop)
+    box_rulers = getindex.(rulers, range.(start, stop))
+    box_deltas = diff.(box_rulers)
 
     len = stop - start
     I = dict([k => begin
@@ -245,17 +248,17 @@ function _get_λmodes(s, ϵ, TEMP, mode_solutions, g)
 
     # 
     if !isnothing(λmodenums)
-        sz = round(dimensions / dx)
-        P = frame[1:end-1, 1:end-1]
-        plane_start = center - P * collect((sz - 1) / 2) - bbox[:, 1]
-        plane_points = map(CartesianIndices(Tuple(sz))) do I
+        global sz = floor.(Int, dimensions / dx)
+        global P = dx * frame[:, 1:end-1]
+        global plane_start = center - P * collect((sz - 1) / 2) - bbox[:, 1]
+        global plane_points = map(CartesianIndices(Tuple(sz))) do I
             P * collect(Tuple(I) - 1) + plane_start
         end
-        plane_Is = map(plane_points) do p
-            indexof.(plane_rulers, p)
+        global plane_Is = map(plane_points) do p
+            indexof.(box_rulers, p)
         end
 
-        ϵmode = samplemesh(ϵ, plane_points .+ bbox[:, 1])
+        global ϵmode = samplemesh(ϵ, plane_points .+ (bbox[:, 1],)) .|> F
         λmodes = OrderedDict([λ => begin
             modes = solvemodes(ϵmode, dx, λ, maximum(mns) + 1, TEMP; mode_solutions)[mns+1]
             map(modes) do mode
@@ -270,7 +273,7 @@ function _get_λmodes(s, ϵ, TEMP, mode_solutions, g)
 
         if isa(s, Monitor)
             λmodes = kmap(λmodes) do modes
-                normalize_mode.(modes, (plane_deltas,))
+                normalize_mode.(modes, (dx,))
             end
             _λmodes = kmap(λmodes) do modes
                 mirror_mode.(modes)
@@ -314,5 +317,5 @@ function _get_λmodes(s, ϵ, TEMP, mode_solutions, g)
     end
     # m = kmap(x -> C.(x), m)
 
-    (; λmodes, _λmodes, plane_rulers, bbox, plane_deltas, I, plane_points, plane_Is, labelpos)
+    (; λmodes, _λmodes, box_rulers, bbox, box_deltas, I, plane_points, plane_Is, plane_deltas, labelpos)
 end

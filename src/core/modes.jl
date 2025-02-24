@@ -12,17 +12,20 @@ mirror_mode(m; flip=true) = namedtuple([k =>
     end for k in keys(m)])
 
 # function normalize_mode(m, deltas)
-function inner(u, v, deltas)
-    @nograd deltas
+function inner(u, v, Δ)
+    # global _ad = u, v, Δ
+    @nograd Δ
     p = conj(u(:Ex, 0)) ⊙ v(:Hy, 0) -
         conj(u(:Ey, 0)) ⊙ v(:Hx, 0) +
         conj(u(:Hy, 0)) ⊙ v(:Ex, 0) -
         conj(u(:Hx, 0)) ⊙ v(:Ey, 0)
-    N = length(deltas)
-    p * sum(mapreduce((x, y) -> x .* y, enumerate(deltas)) do (i, v)
-        sel = i .== N
-        reshape(v, (length(v) * sel + .!sel)...)
-    end)
+    N = ndims(p)
+    sum(p) * Δ^N
+    # sz = length.(Δ)
+    # sum(p .* mapreduce((x, y) -> x .* y, enumerate(Δ)) do (i, v)
+    #     sel = i .== 1:N
+    #     repeat(v, (sel + .!sel .* sz)...)
+    # end)
 end
 
 function normalize_mode(m, deltas)

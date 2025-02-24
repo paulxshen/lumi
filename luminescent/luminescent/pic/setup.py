@@ -19,7 +19,7 @@ from gdsfactory.generic_tech import LAYER_STACK, LAYER
 
 def setup(path, c, study, nres, center_wavelength,
           bbox_layer=BBOX_LAYER,
-          zmargin2=None, zlims=None, core_layer=LAYER.WG,
+          zlims=None, core_layer=LAYER.WG,
           port_source_offset="auto", port_margin="auto",
           runs=[],  sources=[],
           layer_stack=SOI, materials=dict(),
@@ -70,7 +70,7 @@ def setup(path, c, study, nres, center_wavelength,
         z, n = [0, 0, 1], [*v['normal'], 0]
         t = np.cross(z, n).tolist()
         v['frame'] = [t, z, n]
-        v["dimensions"] = np.abs(v['width']*np.array(v['tangent'])).tolist(),
+        v["dimensions"] = [v['width']],
     prob["ports"] = ports
     mode_solutions = []
 
@@ -78,16 +78,11 @@ def setup(path, c, study, nres, center_wavelength,
     hcore = d.thickness
     zcore = d.zmin
 
-    zmargin1 = 3*hcore
-    hmode = hcore+2*zmargin1
-    zmargin1 = (hmode-hcore)/2
-
-    zmode = zcore-zmargin1
+    zmargin = 3*hcore
     zcenter = zcore+hcore/2
 
-    zmargin2 = 2*hcore
-    h = hcore+2*(zmargin1+zmargin2)
-    zmin = zcore-zmargin2-zmargin1
+    h = hcore+2*zmargin
+    zmin = zcore-zmargin
     zmax = zmin+h
 
     source_ports = []
@@ -107,7 +102,7 @@ def setup(path, c, study, nres, center_wavelength,
     ps = portsides(c)
     xmargin = ymargin = 2*port_width
 
-    source_port_margin = 3 * port_width if N == 2 else 6*port_width
+    source_port_margin = 4 * port_width  # if N == 2 else 6*port_width
 
     port_margin = center_wavelength/nres
     margins = []
@@ -119,20 +114,20 @@ def setup(path, c, study, nres, center_wavelength,
         else:
             assert not p
             margins.append(xmargin)
+    print(margins)
 
     #
-    modemargin = 1*port_width
-    wmode = port_width+2*modemargin
-    modemargin = (wmode-port_width)/2
+    modexmargin = .8*xmargin
+    modezmargin = .8*zmargin
+    wmode = port_width+2*modexmargin
+    hmode = hcore+2*modezmargin
+    zmode = zcore-modezmargin
 
     prob["hcore"] = hcore
     prob["zcenter"] = zcenter
     prob["zmin"] = zmin
     prob["zmax"] = zmax
     prob["zcore"] = zcore
-    prob["xmargin"] = xmargin
-    prob["ymargin"] = ymargin
-    prob["zmargin2"] = zmargin2
     # prob["L"] = [l, w, h]
 
     _c = gf.Component()
@@ -169,17 +164,7 @@ def setup(path, c, study, nres, center_wavelength,
     else:
         subprocess.run(["cp", fn, TEMP])
     prob["layer_stack"] = layer_stack_info
-    # materials = set([v["material"] for v in layer_stack_info.values()])
-    # d = {
-    #     k: materials[k] for k in materials
-    # }
     prob["study"] = study
-    # mateps = {k: np.real(v) for k, v in d.items()}
-    # materials = {
-    #     k: {} for k in materials
-    # }
-    # for k, v in mateps.items():
-    #     materials[k]["epsilon"] = v
     prob["materials"] = materials
 
     prob["N"] = N
@@ -187,25 +172,26 @@ def setup(path, c, study, nres, center_wavelength,
     prob["hmode"] = hmode
     prob["wmode"] = wmode
     prob["zmode"] = zmode
-    wmode = port_width+2*modemargin
-    # print(margin)
-    neffmin = 1000000
+    wmode = port_width+2*modexmargin
     wavelengths = []
     # _c = add_bbox(c, layer=bbox_layer, nonport_margin=margin)
     for run in runs:
         for k, v in list(run["sources"].items())+list(run["monitors"].items()):
             p = ports[k]
-            v['dimensions'] = list(p['dimensions'])+[hmode]
+            # v['dimensions'] = p['dimensions'][0]+[hmode]
+            v['dimensions'] = [wmode, hmode]
             v['frame'] = p['frame']
             for center_wavelength in v["wavelength_mode_numbers"]:
                 wavelengths.append(center_wavelength)
-
-            if k in run["sources"]:
-                ct = np.array(p['center'])
-                n = np.array(p['normal'])
-                v["center"] = (ct-n*port_margin).tolist()
-            else:
-                v['center'] = list(p['center'])
+        for k, v in run['sources'].items():
+            p = ports[k]
+            ct = np.array(p['center'])
+            n = np.array(p['normal'])
+            v["center"] = (ct+n*source_port_margin).tolist()
+            v['center'] += [zcenter]
+        for k, v in run['monitors'].items():
+            p = ports[k]
+            v['center'] = copy.deepcopy(p['center'])
             v['center'] += [zcenter]
 
     wavelengths = sorted(set(wavelengths))
