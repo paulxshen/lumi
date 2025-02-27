@@ -83,8 +83,10 @@ end
 
 function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=false)
     N = length(rulers)
+    In = LinearAlgebra.I(N)
     ns = length.(rulers)
     default = meshvals[end][2]
+    F = eltype(rulers[1])
     a = map(Base.product(Base.OneTo.(ns - 1)...)) do I
         start = getindex.(rulers, I)
         stop = getindex.(rulers, I .+ 1)
@@ -92,8 +94,8 @@ function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=
 
         start -= Δ / 4
         stop += Δ / 4
-        start .= max.(start, first.(rulers))
-        stop .= min.(stop, last.(rulers))
+        start .= max.(start, first.(rulers) + F(0.001))
+        stop .= min.(stop, last.(rulers) - F(0.001))
         center = (start + stop) / 2
 
         # box = Box(Point(start...), Point(stop...))
@@ -103,8 +105,8 @@ function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=
             # if !isnothing(m) && intersects(box, m)
             if !isnothing(m) && xor(sideof(Point(start...), m) != OUT, sideof(Point(stop...), m) != OUT)
                 hits[i] = true
-            elseif (!any(hits) && isnothing(m)) || (!isnothing(m) && sideof(point, m) == IN)
-                inv && return 1 / v
+            elseif (!any(hits) && isnothing(m)) || (!isnothing(m) && sideof(point, m) != OUT)
+                tensor && inv && return (In) / v
                 return v
             end
         end
@@ -113,7 +115,7 @@ function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=
         δ = Δ / n
         a = map(Base.product(range.(start + δ / 2, stop - δ / 2, n)...)) do p
             for (m, v) = meshvals[hits]
-                (isnothing(m) || sideof(Point(p...), m) != OUT) && return v
+                sideof(Point(p...), m) != OUT && return v
             end
             default
         end

@@ -40,5 +40,9 @@ picrun(joinpath("build", "precompile_execution", "tiny_3_float32_CUDA"), cu)
 # up"
 
 using GLMakie: volume
-# volume(prob.source_instances[1].sigmodes[1][2].Jz |> cpu .|> abs)
-volume(_gf2[1].Jy |> cpu .|> abs)
+# volume(prob.geometry)
+# volume(prob.source_instances[1].sigmodes[1][2].Jx |> cpu .|> abs)
+# volume(_gf2[1].Jx |> cpu .|> abs)
+# volume(sols[1].u.H.Hz |> cpu .|> abs)
+prob.geometry.invϵ |> cpu |> first |> extrema
+volume(prob.geometry.invϵ |> cpu |> first)

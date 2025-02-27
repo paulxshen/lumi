@@ -161,6 +161,7 @@ function picrun(path, array=Array; kw...)
     t0 = time()
     println("compiling simulation code...")
     if study == "sparams"
+        global sols
         @unpack S, sols = calc_sparams(runs, run_probs;
             F, verbose=true, framerate, path)
         plotsols(sols, run_probs, path)

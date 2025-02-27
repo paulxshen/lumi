@@ -130,7 +130,7 @@ function SourceInstance(s::Source, g, ϵ, TEMP, mode_solutions=nothing)
     C = complex(F)
     N = ndims(s)
 
-    @unpack λmodes, _λmodes, box_size, bbox, box_deltas, I, signed_plane_points, plane_Is, labelpos =
+    @unpack λmodes, _λmodes, box_size, bbox, box_deltas, I, plane_points, plane_Is, labelpos =
         _get_λmodes(s, ϵ, TEMP, mode_solutions, g)
 
     λs = @ignore_derivatives Array(keys(λmodes))
@@ -264,19 +264,19 @@ function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g)
     if !isnothing(λmodenums)
         global plane_size = floor.(Int, dimensions / dx)
         global P = dx * frame[:, 1:end-1]
-        global signed_plane_start = center - P * collect((plane_size - 1) / 2) - signed_bbox[:, 1]
+        global signed_plane_start = center - P * collect((plane_size - 1) / 2)
 
-        global signed_plane_points = map(CartesianIndices(Tuple(plane_size))) do I
+        global plane_points = map(CartesianIndices(Tuple(plane_size))) do I
             P * collect(Tuple(I) - 1) + signed_plane_start
         end
-        global plane_Is = map(signed_plane_points) do p
-            v = corner + indexof.(signed_plane_rulers, p) - F(0.5)
+        global plane_Is = map(plane_points) do p
+            v = indexof.(rulers, p) - start + F(0.5)
             v = max.(v, 1)
             v = min.(v, box_size)
         end
         plane_deltas = dx
 
-        global ϵmode = samplemesh(ϵ, signed_plane_points .+ (signed_bbox[:, 1],)) .|> F
+        global ϵmode = samplemesh(ϵ, plane_points) .|> F
         λmodes = OrderedDict([λ => begin
             modes = solvemodes(ϵmode, dx, λ, maximum(mns) + 1, TEMP; mode_solutions)[mns+1]
             map(modes) do mode
@@ -288,7 +288,7 @@ function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g)
                 namedtuple(ks .=> mode.(ks))
             end
         end for (λ, mns) = pairs(λmodenums)])
-        display(heatmap(ϵmode))
+        # display(heatmap(ϵmode))
 
         if isa(sm, Monitor)
             λmodes = vmap(λmodes) do modes
@@ -336,5 +336,5 @@ function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g)
     end
     # m = vmap(x -> C.(x), m)
 
-    global r = (; λmodes, _λmodes, box_size, box_rulers, bbox, box_deltas, I, signed_plane_points, plane_Is, plane_deltas, labelpos)
+    global r = (; λmodes, _λmodes, box_size, box_rulers, bbox, box_deltas, I, plane_points, plane_Is, plane_deltas, labelpos)
 end

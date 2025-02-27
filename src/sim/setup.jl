@@ -49,6 +49,9 @@ function setup(bbox, boundaries, sources, monitors, nres;
                 if !haspec
                     println("no PEC regions found in geometry")
                     geometry[:invϵ] = tensorinv(v, rulers; tensor=true, inv=true)
+                    # geometry[:invϵ] = [map(geometry[:ϵ][1]) do a
+                    #     1 ./ a
+                    # end]
                 else
                     geometry[:invϵ] = [map(geometry[:ϵ][1]) do a
                         1 ./ a
