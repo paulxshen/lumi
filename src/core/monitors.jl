@@ -15,7 +15,9 @@ end
 function Monitor(center, dimensions, frame, λ=1; λmodenums=nothing, λsmode=nothing, λmodes=nothing, tags...)
     center /= λ
     dimensions /= λ
-    λmodenums = kmap(x -> x / λ, identity, λmodenums)
+    λmodenums = kvmap((k, v) -> (k / λ, v), λmodenums)
+    tags = OrderedDict(tags)
+
     Monitor(λmodenums, λsmode, λmodes, center, dimensions, frame, tags)
 end
 
@@ -57,9 +59,11 @@ wavelengths(m::MonitorInstance) = keys(m.λmodes)
 Base.length(m::MonitorInstance) = 1
 
 function MonitorInstance(m::Monitor, g, ϵ, TEMP, mode_solutions=nothing)
-    @unpack λmodes, _λmodes, box_rulers, bbox, box_deltas, I, plane_deltas, plane_points, plane_Is, labelpos = _get_λmodes(m, ϵ, TEMP, mode_solutions, g)
-    # println("")
-    MonitorInstance(m.center, m.frame, I, box_deltas, plane_Is, plane_deltas, λmodes, _λmodes, m.tags)
+    @unpack λmodes, _λmodes, box_rulers, bbox, box_deltas, I, plane_deltas, plane_Is, labelpos = _get_λmodes(m, ϵ, TEMP, mode_solutions, g)
+    @unpack F = g
+    @unpack center, frame = m
+    center, frame = F.((center, frame))
+    MonitorInstance(center, frame, I, box_deltas, plane_Is, plane_deltas, λmodes, _λmodes, m.tags)
 end
 
 function MonitorInstance(m::PlaneMonitor, g)

@@ -25,7 +25,7 @@ function pad_geometry(geometry, geometry_padvals, geometry_padamts)
     namedtuple([
         k => begin
             a = geometry[k]
-            if isa(a, AbstractVector) && k in keys(geometry_padvals) && k in keys(geometry_padamts)
+            if a isa AbstractArray && k in keys(geometry_padvals) && k in keys(geometry_padamts)
                 map(a) do a
                     pad(a, geometry_padvals[k][1], eachcol(geometry_padamts[k])...)
                 end
@@ -97,38 +97,35 @@ function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=
         center = (start + stop) / 2
 
         # box = Box(Point(start...), Point(stop...))
-        start = Point(start...)
-        stop = Point(stop...)
         point = Point(center...)
         hits = fill(false, length(meshvals))
         for (i, (m, v)) = enumerate(meshvals)
             # if !isnothing(m) && intersects(box, m)
-            if !isnothing(m) && xor(sideof(start, m) != OUT, sideof(stop, m) != OUT)
+            if !isnothing(m) && xor(sideof(Point(start...), m) != OUT, sideof(Point(stop...), m) != OUT)
                 hits[i] = true
-            elseif isnothing(m) || sideof(point, m) == IN
+            elseif (!any(hits) && isnothing(m)) || (!isnothing(m) && sideof(point, m) == IN)
+                inv && return 1 / v
                 return v
             end
         end
 
-        if any(hits)
-            n = 4
-            δ = Δ / n
-            a = map(Base.product(range.(start + δ / 2, stop - δ / 2, n)...)) do p
-                for (m, v) = meshvals[hits]
-                    (isnothing(m) || sideof(p, m) != OUT) && return v
-                end
-                default
+        n = 4
+        δ = Δ / n
+        a = map(Base.product(range.(start + δ / 2, stop - δ / 2, n)...)) do p
+            for (m, v) = meshvals[hits]
+                (isnothing(m) || sideof(Point(p...), m) != OUT) && return v
             end
-
-            if tensor && inv
-                n = imnormal(a)
-                P = n * n'
-                P * mean(1 ./ a) + (LinearAlgebra.I - P) / mean(a)
-            elseif !tensor && !inv
-                mean(a)
-            end
-        else
             default
+        end
+
+        if tensor && inv
+            n = imnormal(a)
+            P = n * n'
+            P * mean(1 ./ a) + (LinearAlgebra.I - P) / mean(a)
+        elseif !tensor
+            v = mean(a)
+            inv && return 1 / v
+            v
         end
     end
 
@@ -142,7 +139,7 @@ function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=
         end
         [j <= i ? v[i][j] : v[j][i] for i = 1:N, j = 1:N]
     elseif !tensor && !inv
-        a
+        [a]
     end
 end
 

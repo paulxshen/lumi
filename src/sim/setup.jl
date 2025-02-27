@@ -17,20 +17,19 @@ function setup(bbox, boundaries, sources, monitors, nres;
     pmlfracs=1,
     TEMP="",
 )
-
+    Courant = F(Courant)
     bbox, nres, = F.((bbox, nres,))
-    rulers = makemesh(ϵ, bbox, nres)
-
+    rulers = makemesh(ϵ, bbox, nres) |> F
     deltas = diff.(rulers)
     N = length(rulers)
-    sz = Tuple(length.(rulers))
+    sz = Tuple(length.(rulers) - 1)
 
     if !isnothing(approx_2D_mode)
         approx_2D_mode = Symbol(approx_2D_mode)
     end
     pmlfracs = _pmlfracs(pmlfracs, N)
 
-    geometry = OrderedDict()
+    global geometry = OrderedDict()
     println("preprocessing geometry...")
     for (k, v) = pairs((; ϵ, μ, σ, m, γ, β))
         if isa(v, Number)
@@ -51,16 +50,20 @@ function setup(bbox, boundaries, sources, monitors, nres;
                     println("no PEC regions found in geometry")
                     geometry[:invϵ] = tensorinv(v, rulers; tensor=true, inv=true)
                 else
-                    geometry[:invϵ] = map(geometry[:ϵ][1]) do a
+                    geometry[:invϵ] = [map(geometry[:ϵ][1]) do a
                         1 ./ a
-                    end
+                    end]
                 end
             elseif k == :μ
-                geometry[:invμ] = map(geometry[:μ][1]) do a
+                geometry[:invμ] = [map(geometry[:μ][1]) do a
                     1 ./ a
-                end
+                end]
             end
         end
+    end
+    geometry_names = (:ϵ, :μ, :σ, :m, :invϵ, :invμ)
+    for k = geometry_names
+        k, extrema(geometry[k][1]) |> println
     end
 
     a = geometry.ϵ[1]
@@ -85,7 +88,6 @@ function setup(bbox, boundaries, sources, monitors, nres;
     @show σpml
     @show pml_depths
 
-    geometry_names = (:ϵ, :μ, :σ, :m, :invϵ, :invμ)
     if N == 1
         field_names = (:Ez, :Hy)
     elseif N == 2
@@ -113,20 +115,28 @@ function setup(bbox, boundaries, sources, monitors, nres;
     offsets = OrderedDict()
     sizes = OrderedDict([
         :default => collect(sz),
-        (field_names .=> (collect(sz),))...
+        map(field_names) do k
+            k => collect(sz)
+        end...
     ])
     boundvals = OrderedDict([
         :default => zeroarray(),
-        (field_names .=> (nothingarray(),))...
+        map(field_names) do k
+            k => nothingarray()
+        end...
     ])
     # 
     padvals = OrderedDict([
         :default => nothingarray(),
-        (geometry_names .=> (nothingarray(),))...
+        map(geometry_names) do k
+            k => nothingarray()
+        end...
     ])
     padamts = OrderedDict([
         :default => zeroarray(),
-        (geometry_names .=> (zeroarray(),))...
+        map(geometry_names) do k
+            k => zeroarray()
+        end...
     ])
 
     edges = OrderedDict([k => zeros(Bool, N, 2) for k = field_names])
@@ -198,7 +208,7 @@ function setup(bbox, boundaries, sources, monitors, nres;
                 v = maxdeltas[i] * (1:npml)
                 if j == 1
                     # pushfirst!(deltas[i], fill(maxdeltas[i], npml)...)
-                    prepend!(rulers[i], rulers[i][1] - v)
+                    prepend!(rulers[i], rulers[i][1] - reverse(v))
                 else
                     # push!(deltas[i], fill(maxdeltas[i], npml)...)
                     append!(rulers[i], rulers[i][end] + v)
@@ -253,6 +263,7 @@ function setup(bbox, boundaries, sources, monitors, nres;
         end
     end
     add_current_keys!(u0)
+    all_field_names = keys(u0)
     u0 = groupkeys(u0)
 
     add_current_keys!(edges)
@@ -261,12 +272,11 @@ function setup(bbox, boundaries, sources, monitors, nres;
             # xyz = f[2]
             # terminations = zip(is_field_on_lb[f], is_field_on_ub[f])
             # g = Symbol("$(k)$xyz$xyz")
-            l = -edges[f][:, 1] / 2
+            l = -edges[f][:, 1] / 2 |> F
             f => [l l]
         end for f = keys(edges)])
 
-    diffpadvals = kmap(a -> reverse(a, dims=2), boundvals)
-    diffpadvals = refactor(diffpadvals)
+    diffpadvals = vmap(a -> reverse(a, dims=2), boundvals)
 
     rulers = OrderedDict([
         :default => rulers,
@@ -281,13 +291,13 @@ function setup(bbox, boundaries, sources, monitors, nres;
             end
         end...
     ])
-    deltas = kmap(rulers) do vs
+    deltas = vmap(rulers) do vs
         diff.(vs)
     end
     diffdeltas = OrderedDict([
         k => begin
             vs = centroids.(vs)
-            sz = length.(vs)
+            # sz = length.(vs)
             N = length(vs)
             map(1:N, vs, eachrow(edges[k])) do i, v, (l, r)
                 s = i .== (1:N)
@@ -298,12 +308,13 @@ function setup(bbox, boundaries, sources, monitors, nres;
                 if !r
                     push!(v, last(v))
                 end
-                repeat(v, (s + sz .* .!s)...)
+                reshape(v, (.!s + length(v) * s)...)
             end
         end for (k, vs) = pairs(rulers)])
+
     dx = F(1 / nres / nmax)
-    sizes = kmap(Tuple, sizes)
-    grid = (; rulers, deltas, sizes, offsets, boundvals, diffpadvals, diffdeltas, padvals, padamts, F, N, field_names, dx) |> pairs |> OrderedDict
+    sizes = vmap(Tuple, sizes)
+    global grid = (; rulers, deltas, sizes, edges, offsets, boundvals, diffpadvals, diffdeltas, padvals, padamts, F, N, field_names, all_field_names, dx) |> pairs |> OrderedDict
 
     println("making sources...")
     mode_solutions = []
@@ -355,21 +366,20 @@ function setup(bbox, boundaries, sources, monitors, nres;
                       geometry, nmax, nmin,
                       u0, dt, array,) |> pairs |> OrderedDict
 
-    _gpu = x -> gpu(array, x)
     if array == Array
         println("using CPU backend.")
     else
         println("using GPU backend.")
-    end
-    for k in (:u0, :geometry, :source_instances, :monitor_instances)
-        prob[k] = _gpu(prob[k],)
-    end
-    for k = [:diffdeltas]
-        prob.grid[k] = _gpu.(prob.grid[k])
-    end
+        for k in (:u0, :geometry, :source_instances, :monitor_instances)
+            prob[k] = gpu(array, prob[k],)
+        end
+        for k = [:diffdeltas]
+            prob.grid[k] = gpu(array, prob.grid[k])
+        end
 
-
-    # p = fmap(array, p, AbstractArray{<:Number})
+        # error("stop here")
+        # p = fmap(array, p, AbstractArray{<:Number})
+    end
 
     prob
 end

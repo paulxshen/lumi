@@ -59,7 +59,7 @@ end
 
 function collapse_mode(m, p=:TE)
     p = Symbol(p)
-    m = kmap(m) do a
+    m = vmap(m) do a
         mean(a, dims=2) |> vec
     end
     if p == :TE
@@ -85,11 +85,13 @@ function localframe(u, monitor)
     #     permutexyz(u, monitor.dimsperm, N)
     # else
     u = packxyz(u)
-    u = kmap(u) do v
+    u = vmap(u) do v
         inv(monitor.frame) * v
     end
     u = unpackxyz(u)
-    getindexf.((u,), Tuple.(monitor.plane_Is))
+    vmap(u) do v
+        getindexf.((v,), Tuple.(monitor.plane_Is))
+    end
 end
 
 # function globalframe(mode, monitor)
@@ -100,7 +102,7 @@ end
 #         permutexyz(mode, invperm(dimsperm), N)
 #     else
 #         mode = packxyz(mode)
-#         mode = kmap(mode) do v
+#         mode = vmap(mode) do v
 #             frame * v
 #         end
 

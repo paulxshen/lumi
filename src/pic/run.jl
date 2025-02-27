@@ -129,7 +129,7 @@ function picrun(path, array=Array; kw...)
 
                 λmodenums = SortedDict([(F(λ)) => v for (λ, v) in pairs(wavelength_mode_numbers)])
 
-                push!(sources, Source(center, dimensions, frame, λ; λmodenums, label="s$(string(port)[2:end])"))
+                push!(sources, Source(center, dimensions, frame, λ; λmodenums, port, wavelength_mode_numbers, label="s$(string(port)[2:end])"))
             end
             sources
         end for run in runs
@@ -145,7 +145,7 @@ function picrun(path, array=Array; kw...)
 
             λmodenums = SortedDict([F(λ) => v for (λ, v) in pairs(m.wavelength_mode_numbers)])
 
-            Monitor(center, dimensions, frame, λ; λmodenums, label=port)
+            Monitor(center, dimensions, frame, λ; λmodenums, port, label="m$(string(port)[2:end])", wavelength_mode_numbers)
         end for (port, m) = SortedDict(run.monitors) |> pairs] for run in runs]
 
     global run_probs =

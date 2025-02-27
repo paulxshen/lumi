@@ -53,8 +53,13 @@ end
 function LinearAlgebra.cross(m::Del, d::Map)
     @unpack diff, deltas, padvals = m
     ks = keys(d)
-    Δs = @ignore_derivatives [[d(k) for k in ks] for d = deltas]
-    ps = @ignore_derivatives [[d(k) for k in ks] for d = padvals]
+    N = ndims(d(1))
+    Δs = map(1:N) do i
+        getindex.(deltas.(ks), i)
+    end
+    ps = map(1:N) do i
+        getindex.(padvals.(ks), i, :)
+    end
     as = values(d)
     delcross(diff, Δs, ps, as)
 end
@@ -84,7 +89,7 @@ function delcross(diff, Δs, ps, as)
             error()
         end
     elseif N == 3
-        dx, dy, dz = [Δs(i) for i = 1:3]
+        dx, dy, dz = Δs.(1:3)
         u, v, w = as
         uy = _diffpad(u, ps(2)(1), 2) ./ dy(1)
         uz = _diffpad(u, ps(3)(1), 3) ./ dz(1)

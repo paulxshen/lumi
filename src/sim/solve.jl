@@ -63,7 +63,7 @@ function solve(prob, ;
     durations = [Ttrans, Tss]
     T = cumsum(durations)
     us0 = (u0,)
-    init = (us0, p, (dt, diffdeltas, diffpadvals, source_instances,))
+    global init = (us0, p, (dt, diffdeltas, diffpadvals, source_instances,))
 
     ts = 0:dt:T[1]-F(0.001)
     @nograd ts
@@ -138,6 +138,7 @@ function solve(prob, ;
     v = map(um, monitor_instances) do um, m
         @nograd m
         map(um, wavelengths(m)) do um, λ
+            um, m = cpu(um), cpu(m)
             um = localframe(um, m)
             ap = am = nothing
             if !isnothing(m.λmodes)
@@ -163,14 +164,13 @@ function solve(prob, ;
 
     # am = [[v[j][i][3] for j = 1:nλ] for i = 1:nm]
 
-    return Solution(u, p, _p, ulims, um, ap, am)
+    return Solution(u, p, ulims, um, ap, am)
 end
 
 
 struct Solution
     u
     p
-    _p
     ulims
     um
     ap

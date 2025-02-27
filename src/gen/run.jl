@@ -183,7 +183,7 @@ function genrun(path, array=Array; kw...)
 
     u = cpu(sol.u)
     d = merge(u.E, u.H)
-    global d = kmap(string, identity, d) |> pairs |> Dict
+    global d = vmap(string, identity, d) |> pairs |> Dict
     # npzwrite(joinpath(path, "fields.npz"), d)
 
 

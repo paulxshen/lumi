@@ -66,26 +66,21 @@ function calc_sparams(runs, run_probs,
 
     # return sols[1]
     coeffs = OrderedDict()
-    for (sol, run) in zip(sols, runs)
-        sources = values(run.sources)
-        monitors = values(run.monitors)
-        source_port = first(sources).port
-        source_mn = first(sources).wavelength_mode_numbers(1)[1]
-        for (m, monitor) = enumerate(monitors)
-            # for (w, λ) = enumerate(sort(keys(monitor.wavelength_mode_numbers), by=x -> parse(F, x)))
-            for (w, λ) = enumerate(keys(monitor.wavelength_mode_numbers))
-                # println("monitor $m, λ $λ")
-                _λ = @ignore_derivatives Base.round(parse(F, λ), digits=4)
-                # for mn = sort(monitor.wavelength_mode_numbers[λ])
-                for mn = monitor.wavelength_mode_numbers[λ]
-                    # λ = _λ
-                    monitor_port = monitor.port
+    for (sol, prob) in zip(sols, run_probs)
+        @unpack source_instances, monitor_instances = prob
+        source_port = source_instances(1).tags.port
+        source_mn = first(source_instances).tags.wavelength_mode_numbers(1)[1]
+        for (i, m) = enumerate(monitor_instances)
+            for (w, λ) = enumerate(keys(m.tags.wavelength_mode_numbers))
+                # _λ = @ignore_derivatives Base.round(parse(F, λ), digits=4)
+                for mn = m.tags.wavelength_mode_numbers[λ]
+                    monitor_port = m.tags.port
                     if !haskey(coeffs, λ)
                         coeffs[λ] = OrderedDict()
                     end
                     s = "$monitor_port@$mn," * "$source_port@$source_mn"
                     s = Symbol(s)
-                    coeffs[λ][s] = (sol("a+", m, w, mn), sol("a-", m, w, mn))
+                    coeffs[λ][s] = (sol("a+", i, w, mn), sol("a-", i, w, mn))
                 end
             end
         end
@@ -176,42 +171,44 @@ function plotsols(sols, probs, path,)
     # try
     for (i, (prob, sol)) in enumerate(zip(probs, sols))
         # try
-        @unpack u, p, _p = sol |> cpu
+        @unpack u, p = sol |> cpu
         prob = prob |> cpu
-        @unpack monitor_instances, source_instances, λ, = prob
-        @unpack deltas, spacings, bbox, dl = prob.grid
-        u = u.H.Hz
-        N = ndims(u)
-        # if N == 3
-        #     volume(u) |> display
-        #     heatmap(u[:, :, round(Int, size(u, 3) / 2)]) |> display
-        # else
-        #     heatmap(u) |> display
+        a = u(:Hz)
+        heatmap(a[:, :, round(Int, size(a, 3) / 2)]) |> display
+        #     @unpack monitor_instances, source_instances, λ, = prob
+        #     @unpack deltas, spacings, bbox, dl = prob.grid
+        #     u = u.H.Hz
+        #     N = ndims(u)
+        #     # if N == 3
+        #     #     volume(u) |> display
+        #     #     heatmap(u[:, :, round(Int, size(u, 3) / 2)]) |> display
+        #     # else
+        #     #     heatmap(u) |> display
+        #     # end
+        #     # return
+        #     g = _p.ϵ
+        #     u = upsample(u, spacings)
+        #     # g = imresize(g, size(u))
+        #     bbox /= dl
+        #     ratio = int(deltas[1] / dl)
+
+        #     plt = quickie(u, g; dl, λ, monitor_instances, ratio, source_instances, bbox)
+        #     display(plt)
+
+        #     if !isa(path, Base.AbstractVecOrTuple)
+        #         path = (path,)
+        #     end
+        #     for path = path
+        #         try
+        #             CairoMakie.save(joinpath(path, "run_$i.png"), plt,)
+        #         catch e
+        #             println("save plot failed")
+        #             println(e)
+        #         end
+        #     end
         # end
-        # return
-        g = _p.ϵ
-        u = upsample(u, spacings)
-        # g = imresize(g, size(u))
-        bbox /= dl
-        ratio = int(deltas[1] / dl)
-
-        plt = quickie(u, g; dl, λ, monitor_instances, ratio, source_instances, bbox)
-        display(plt)
-
-        if !isa(path, Base.AbstractVecOrTuple)
-            path = (path,)
-        end
-        for path = path
-            try
-                CairoMakie.save(joinpath(path, "run_$i.png"), plt,)
-            catch e
-                println("save plot failed")
-                println(e)
-            end
-        end
+        # catch e
+        #     println("plot failed")
+        #     println(e)
     end
-    # catch e
-    #     println("plot failed")
-    #     println(e)
-    # end
 end
