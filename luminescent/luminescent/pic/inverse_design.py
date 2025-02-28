@@ -17,13 +17,13 @@ def make_pic_inv_problem(path, c,  targets, iters=10,
                          lvoid=0, lsolid=0, symmetries=[],
                          weights=dict(),
                          eta=.4, init=1,   stoploss=None,
-                         design_region_layer=DESIGN_LAYER,
+                         canvas_layer=DESIGN_LAYER,
                          #    design_guess_layer=LAYER.GUESS,
                          fill_layer=LAYER.WG,
                          void_layer=None,
                          layer_stack=SOI,
                          restart=True, save_memory=False, **kwargs):
-    design_region_layer = tuple(design_region_layer)
+    canvas_layer = tuple(canvas_layer)
     # if not N:
     #     raise NotImplementedError(
     #         "3D inverse design feature must be requested from Luminescent AI info@luminescentai.com")
@@ -105,7 +105,7 @@ def make_pic_inv_problem(path, c,  targets, iters=10,
     prob["wavelengths"] = wavelengths
     # prob["init"] = init
     prob["eta"] = eta
-    polys = c.extract([design_region_layer]).get_polygons()
+    polys = c.extract([canvas_layer]).get_polygons()
     if not symmetries:
         symmetries = [[]]*len(polys)
     else:
@@ -116,7 +116,7 @@ def make_pic_inv_problem(path, c,  targets, iters=10,
         return [[b.left/1e3, b.bottom/1e3], [b.right/1e3, b.top/1e3]]
     prob["designs"] = [
         {
-            "layer": design_region_layer,
+            "layer": canvas_layer,
             "bbox": _bbox(p.bbox()),
             "symmetries": s,
             "init": init,
@@ -144,7 +144,7 @@ def make_pic_inv_problem(path, c,  targets, iters=10,
     #     d["epsilon"] = d["epsilon"]
     # prob["design_config"]["void"] = d
 
-    prob["design_config"]["design_region_layer"] = design_region_layer
+    prob["design_config"]["canvas_layer"] = canvas_layer
     prob["iters"] = iters
     save_problem(prob, path)
     return prob
@@ -155,7 +155,7 @@ def apply_design(c0,  sol):
     a = gf.Component()
     a.add_ref(c0)
     fill = sol["design_config"]["fill"]["layer"]
-    dl = sol["design_config"]["design_region_layer"]
+    dl = sol["design_config"]["canvas_layer"]
     for i, d in enumerate(sol["designs"]):
         x0, y0 = d["bbox"][0]
         x1, y1 = d["bbox"][1]
@@ -170,7 +170,7 @@ def apply_design(c0,  sol):
     #         c.add_ref(c0.extract([layer]))
     # c.show()
     # raise ValueError()
-    g = gf.import_gds(os.path.join(path, f"optimized_design_region_{i+1}.gds"))
+    g = gf.import_gds(os.path.join(path, f"optimized_canvas_{i+1}.gds"))
     polygons = g.get_polygons(merge=True)
     g = gf.Component()
     for p in polygons[1]:

@@ -12,8 +12,8 @@ using CUDA
 # picrun(joinpath("runs", "splitter"); array=cu)
 # picrun(joinpath("runs", "splitter"))
 # using GLMakie: volume
-# picrun(joinpath("build", "precompile_execution", "tiny_2_float32_CUDA"))#; framerate=10)
-picrun(joinpath("build", "precompile_execution", "tiny_3_float32_CUDA"), cu)
+picrun(joinpath("build", "precompile_execution", "tiny_2_float32_CUDA"))#; framerate=10)
+# picrun(joinpath("build", "precompile_execution", "tiny_3_float32_CUDA"), cu)
 # picrun(joinpath("build", "precompile_execution", "tiny_3_float32_None"))
 # picrun(joinpath("build", "precompile_execution", "back_float32"))
 # picrun(joinpath("runs", "tiny3"))
@@ -44,5 +44,5 @@ using GLMakie: volume
 # volume(prob.source_instances[1].sigmodes[1][2].Jx |> cpu .|> abs)
 # volume(_gf2[1].Jx |> cpu .|> abs)
 # volume(sols[1].u.H.Hz |> cpu .|> abs)
-prob.geometry.invϵ |> cpu |> first |> extrema
-volume(prob.geometry.invϵ |> cpu |> first)
+# prob.geometry.invϵ |> cpu |> first |> extrema
+# volume(prob.geometry.invϵ |> cpu |> first)

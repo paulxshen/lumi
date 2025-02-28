@@ -58,8 +58,8 @@ area(m::MonitorInstance) = m.v
 wavelengths(m::MonitorInstance) = keys(m.λmodes)
 Base.length(m::MonitorInstance) = 1
 
-function MonitorInstance(m::Monitor, g, ϵ, TEMP, mode_solutions=nothing)
-    @unpack λmodes, _λmodes, box_rulers, bbox, box_deltas, I, plane_deltas, plane_Is, labelpos = _get_λmodes(m, ϵ, TEMP, mode_solutions, g)
+function MonitorInstance(m::Monitor, g, ϵ, TEMP; z=nothing, mode_solutions=nothing)
+    @unpack λmodes, _λmodes, box_rulers, bbox, box_deltas, I, plane_deltas, plane_Is, labelpos = _get_λmodes(m, ϵ, TEMP, mode_solutions, g; z)
     @unpack F = g
     @unpack center, frame = m
     center, frame = F.((center, frame))

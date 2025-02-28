@@ -36,30 +36,9 @@ function lastrun(name=nothing; study=nothing, wd=joinpath(pwd(), "runs"))
     return p
 end
 
-function calc_sparams(runs, run_probs,
-    designs=nothing, design_config=nothing, models=nothing; materials=nothing,
-    alg=nothing, save_memory=false, verbose=false, perturb=nothing, framerate=0, path="", kw...)
-    F = run_probs[1].grid.F
-    array = run_probs[1].array
-
-    if !isnothing(models)
-        masks = [m() for m in models]
-        lminloss = 0
-        margins = [m.margin for m in models]
-    else
-        lminloss = 0
-    end
-    sols = [
-        begin
-            if !isnothing(models)
-
-                # @unpack ϵeff, _geometry = prob
-                @unpack geometry = prob
-                prob[:geometry] = make_geometry(masks, margins, geometry, designs, design_config, materials; F, perturb,)# ϵeff)
-            end
-            solve(prob; save_memory, verbose, framerate, path)
-        end for (i, prob) in enumerate(run_probs)
-    ]
+function calc_sparams(run_probs,)
+    lminloss = 0
+    sols = solve.(run_probs)
 
     ignore_derivatives() do
     end

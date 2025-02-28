@@ -81,7 +81,7 @@ function tensorinv(a::AbstractArray{T}, field_lims, spacings) where {T}
     [j <= i ? v[i][j] : v[j][i] for i = 1:N, j = 1:N]
 end
 
-function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=false)
+function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=false, z=nothing)
     N = length(rulers)
     In = LinearAlgebra.I(N)
     ns = length.(rulers)
@@ -97,6 +97,13 @@ function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=
         start .= max.(start, first.(rulers) + F(0.001))
         stop .= min.(stop, last.(rulers) - F(0.001))
         center = (start + stop) / 2
+
+        if !isnothing(z)
+            push!(center, z)
+            push!(start, z)
+            push!(stop, z)
+            push!(Δ, 0)
+        end
 
         # box = Box(Point(start...), Point(stop...))
         point = Point(center...)

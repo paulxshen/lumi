@@ -124,7 +124,7 @@ def load_solution(path, show=True):
             print(
                 f"loading optimized design regions at resolution {sol['dl']}")
             # for i, a in enumerate(l):
-            #     path = f"optimized_design_region_{i+1}.png"
+            #     path = f"optimized_canvas_{i+1}.png"
             #     Image.fromarray(np.flip(np.uint8((1-a)) * 255, 0),
             #                     'L').save(os.path.join(path, name))
             # pic2gds(os.path.join(

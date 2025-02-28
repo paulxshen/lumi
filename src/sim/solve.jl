@@ -43,11 +43,14 @@ end
 function solve(prob, ;
     save_memory=false, ulims=(-3, 3), framerate=nothing, showfield=:Hz, path="", #subpixel=true,
     kwargs...)
-    @unpack approx_2D_mode, dt, u0, geometry, source_instances, monitor_instances, Ttrans, Tss, grid, array = prob
+    @unpack approx_2D_mode, dt, u0, geometry, source_instances, monitor_instances, Ttrans, canvases, Tss, grid, array = prob
 
     @nograd dt, u0, source_instances, monitor_instances, Ttrans, Tss, grid
     @unpack diffdeltas, diffpadvals, F, N, = grid
 
+    for c = canvases
+        apply!(c, geometry)
+    end
     p = geometry
 
     TEMP = joinpath(path, "temp")

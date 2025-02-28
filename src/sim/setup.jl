@@ -8,7 +8,7 @@ _pmlfracs(a::AbstractVector, N) = stack([a[1:N], a[1:N]])
 
 
 function setup(bbox, boundaries, sources, monitors, nres;
-    approx_2D_mode=nothing,
+    approx_2D_mode=nothing, z=nothing,
     Ttrans=nothing, Tss=nothing, Tssmin=nothing,
     ϵ=1, μ=1, σ=0, m=0, γ=0, β=0,
     F=Float32,
@@ -43,12 +43,12 @@ function setup(bbox, boundaries, sources, monitors, nres;
                 end
             end
         else
-            geometry[k] = tensorinv(v, rulers)
+            geometry[k] = tensorinv(v, rulers; z)
             if k == :ϵ
                 haspec = any(>=(PECVAL), last.(ϵ[1:end-1]))
                 if !haspec
                     println("no PEC regions found in geometry")
-                    geometry[:invϵ] = tensorinv(v, rulers; tensor=true, inv=true)
+                    geometry[:invϵ] = tensorinv(v, rulers; tensor=true, inv=true, z)
                     # geometry[:invϵ] = [map(geometry[:ϵ][1]) do a
                     #     1 ./ a
                     # end]
@@ -321,9 +321,9 @@ function setup(bbox, boundaries, sources, monitors, nres;
 
     println("making sources...")
     mode_solutions = []
-    source_instances = SourceInstance.(sources, (grid,), (ϵ,), (TEMP,), (mode_solutions,),)
+    source_instances = SourceInstance.(sources, (grid,), (ϵ,), (TEMP,); z, mode_solutions,)
     println("making monitors...")
-    monitor_instances = MonitorInstance.(monitors, (grid,), (ϵ,), (TEMP,), (mode_solutions,),)
+    monitor_instances = MonitorInstance.(monitors, (grid,), (ϵ,), (TEMP,); z, mode_solutions,)
     ϵeff = nothing
 
     if N == 2

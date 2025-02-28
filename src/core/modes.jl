@@ -162,10 +162,10 @@ function solvemodes(ϵ, dl, λ, neigs, path; mode_solutions=nothing)
 
     # if !isfile(joinpath(path, "$(name)_mode_$(neigs-1).npz"))
     println("run empy")
-    npzwrite(joinpath(path, "args.npz"), Dict("eps" => begin
-            ϵ1 = (ϵ[1:end-1, :] + ϵ[2:end, :]) / 2
-            (ϵ1[:, 1:end-1] + ϵ1[:, 2:end]) / 2
-        end,
+    if ndims(ϵ) == 1
+        ϵ = stack([ϵ, ϵ, ϵ, ϵ])
+    end
+    npzwrite(joinpath(path, "args.npz"), Dict("eps" => ϵ,
         "dl" => dl, "center_wavelength" => λ, "neigs" => neigs, "name" => name))
     fn = joinpath(path, "solvemodes.py")
     try
@@ -177,7 +177,7 @@ function solvemodes(ϵ, dl, λ, neigs, path; mode_solutions=nothing)
 
     modes = [npzread(joinpath(path, "$(name)_mode_$(i-1).npz")) for i = 1:neigs]
     modes = [merge(mode, OrderedDict(["J$s" => mode["E$s"] .* ϵ for s = "xy"])) for mode in modes]
-    modes = [SortedDict([Symbol(k) => mode(k) for k = keys(mode) if string(k)[end] in "xy"]) |> pairs |> NamedTuple for mode in modes]
+    modes = [SortedDict([Symbol(k) => centroidvals(mode(k)) for k = keys(mode) if string(k)[end] in "xy"]) |> pairs |> NamedTuple for mode in modes]
 
     if !isnothing(mode_solutions)
         println("saving mode solutions")

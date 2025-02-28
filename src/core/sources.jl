@@ -124,14 +124,14 @@ function SourceInstance(s::PlaneWave, g)
     SourceInstance(Source(sigmodes, dimensions / 2, -dimensions / 2, dimensions / 2, getdimsperm(dims), tags), g)
 end
 
-function SourceInstance(s::Source, g, ϵ, TEMP, mode_solutions=nothing)
+function SourceInstance(s::Source, g, ϵ, TEMP; z=nothing, mode_solutions=nothing)
     @unpack tags, frame = s
     @unpack F, sizes = g
     C = complex(F)
     N = ndims(s)
 
     @unpack λmodes, _λmodes, box_size, bbox, box_deltas, I, plane_points, plane_Is, labelpos =
-        _get_λmodes(s, ϵ, TEMP, mode_solutions, g)
+        _get_λmodes(s, ϵ, TEMP, mode_solutions, g; z)
 
     λs = @ignore_derivatives Array(keys(λmodes))
     modess = values(λmodes)
@@ -216,7 +216,7 @@ function EH2JM(d::T) where {T}
     dict(Pair.(replace(keys(d), :Ex => :Jx, :Ey => :Jy, :Ez => :Jz, :Hx => :Mx, :Hy => :My, :Hz => :Mz), values(d)))
 end
 
-function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g)
+function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g; z)
     @unpack center, dimensions, tags, frame, λmodenums, λmodes, λsmode = sm
     @unpack F, sizes, rulers, all_field_names, offsets, dx = g
     N = ndims(sm)
@@ -276,7 +276,7 @@ function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g)
         end
         plane_deltas = dx
 
-        global ϵmode = samplemesh(ϵ, plane_points) .|> F
+        global ϵmode = samplemesh(ϵ, plane_points; z) .|> F
         λmodes = OrderedDict([λ => begin
             modes = solvemodes(ϵmode, dx, λ, maximum(mns) + 1, TEMP; mode_solutions)[mns+1]
             map(modes) do mode

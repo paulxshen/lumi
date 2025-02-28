@@ -60,10 +60,12 @@ function picrun(path, array=Array; kw...)
 
     global models = nothing
     if N == 2
-        midplane = Plane((0, 0, zcenter), (0, 0, 1))
-        meps = map(meps) do (m, ϵ)
-            m ∩ midplane, ϵ
-        end
+        # midplane = Plane((0, 0, zcenter), (0, 0, 1))
+        # meps = map(meps) do (m, ϵ)
+        #     m ∩ midplane, ϵ
+        # end
+        z = mean(bbox[3, :])
+        bbox = bbox[1:2, :]
     end
     meps = collect(Tuple{Any,Any}, meps)
     push!(meps, (nothing, epdefault))
@@ -126,7 +128,9 @@ function picrun(path, array=Array; kw...)
                 center = center[1:N]
                 dimensions = dimensions[1:N-1]
                 frame = stack(frame)
-
+                if N == 2
+                    frame = [frame[1:2, 1] frame[1:2, 3]]
+                end
                 λmodenums = SortedDict([(F(λ)) => v for (λ, v) in pairs(wavelength_mode_numbers)])
 
                 push!(sources, Source(center, dimensions, frame, λ; λmodenums, port, wavelength_mode_numbers, label="s$(string(port)[2:end])"))
@@ -142,7 +146,9 @@ function picrun(path, array=Array; kw...)
             center = center[1:N]
             dimensions = dimensions[1:N-1]
             frame = stack(frame)
-
+            if N == 2
+                frame = [frame[1:2, 1] frame[1:2, 3]]
+            end
             λmodenums = SortedDict([F(λ) => v for (λ, v) in pairs(m.wavelength_mode_numbers)])
 
             Monitor(center, dimensions, frame, λ; λmodenums, port, label="m$(string(port)[2:end])", wavelength_mode_numbers)
@@ -152,7 +158,7 @@ function picrun(path, array=Array; kw...)
         [
             begin
                 setup(bbox / λ, boundaries, sources, monitors, nres;
-                    pmlfracs=[1, 1, 0.2], approx_2D_mode, array,
+                    pmlfracs=[1, 1, 0.2], approx_2D_mode, z, array,
                     F, ϵ, TEMP, Ttrans, Tss)
             end for (i, (run, sources, monitors)) in enumerate(zip(runs, runs_sources, runs_monitors))
         ]
@@ -162,9 +168,9 @@ function picrun(path, array=Array; kw...)
     println("compiling simulation code...")
     if study == "sparams"
         global sols
-        @unpack S, sols = calc_sparams(runs, run_probs;
-            F, verbose=true, framerate, path)
-        plotsols(sols, run_probs, path)
+        @unpack S, sols = calc_sparams(run_probs;
+            framerate, path)
+        plotsim(run_probs[1], sols[1], ; path)
         sol = (; sparam_family(S)...,
             path, study)
         open(SOL, "w") do f
@@ -172,14 +178,13 @@ function picrun(path, array=Array; kw...)
         end
     elseif study == "inverse_design"
         ENV["autodiff"] = "1"
-        if length(lb) == 3
+        if N == 3
             if magic != "summersale"
                 error("3D inverse design feature must be requested from Luminescent AI info@luminescentai.com")
             end
         end
         model = models[1]
         # minchange = 0.001
-        # maxchange = max(4minchange, holesize(model) / prod(size(model)))
         global opt = AreaChangeOptimiser(
             model; opt=Optimisers.Momentum(1, 0.7),
         )
@@ -191,92 +196,69 @@ function picrun(path, array=Array; kw...)
         for i = 1:iters
             println("====($i)  ")
             stop = i == iters
-            if :phase_shifter == first(keys(targets))
-                @time l, (dldm,) = Flux.withgradient(model) do model
-                    models = [model]
-                    @unpack S, sols = make_pic_sim_problem(runs, run_probs, lb, dl,
-                        designs, design_config, models;
-                        F, img, alg)#(1)(1)
-                    k = keys(S) |> first
-                    s = S[k][Symbol("o2@0,o1@0")]
-
-                    @unpack S = make_pic_sim_problem(runs, run_probs, lb, dl,
-                        designs, design_config, models;
-                        F, img, alg, save_memory, perturb=:ϵ,)#(1)(1)
-                    s_ = S[k][Symbol("o2@0,o1@0")]
-
-                    T = abs2(s)
-                    dϕ = angle(s_ / s)
-                    println("T: $T, dϕ: $dϕ")
-                    (exp(T - 1) * dϕ / π)
-                    # T * dϕ / π
-                end
-            else
-                function f(model)
-                    models = [model]
-                    res = calc_sparams(runs, run_probs, lb, dl,
-                        designs, design_config, models, ;
-                        F, img, alg, save_memory, materials, path, framerate)
-                    # return res
-                    @unpack S, sols = res
-                    l = 0
-                    for k = keys(targets)
-                        y = targets[k]
-                        err = (x, y) -> abs(x - y)
-                        if :phasediff == k
-                            yhat = namedtuple([
-                                _λ => namedtuple([
-                                    ps =>
-                                        begin
-                                            ks = ignore_derivatives() do
-                                                ps = split(string(ps), ",")
-                                                ks = keys(S[_λ])
-                                                [ks[findfirst(k -> startswith(string(k), p), ks)] for p = ps]
-                                            end
-                                            s1, s2 = [S[_λ][k] for k in ks]
-                                            angle(s1 / s2)
+            function f(model)
+                models = [model]
+                res = calc_sparams(run_probs;
+                    save_memory, path, framerate)
+                # return res
+                @unpack S, sols = res
+                l = 0
+                for k = keys(targets)
+                    y = targets[k]
+                    err = (x, y) -> abs(x - y)
+                    if :phasediff == k
+                        yhat = namedtuple([
+                            _λ => namedtuple([
+                                ps =>
+                                    begin
+                                        ks = ignore_derivatives() do
+                                            ps = split(string(ps), ",")
+                                            ks = keys(S[_λ])
+                                            [ks[findfirst(k -> startswith(string(k), p), ks)] for p = ps]
                                         end
-                                    for ps = keys(targets[k][_λ])])
-                                for _λ = keys(targets[k])])
-                            err = (x, y) -> angle(cis(x) / cis(y))
-                            yhat = flatten(yhat)
-                            y = flatten(y)
-                            Z = length(y) * convert.(F, 2π)
-                        else
-                            yhat = if "sparams" == string(k)
-                                S
-                            elseif "tparams" == string(k)
-                                fmap(abs2, S)
-                            end
-
-                            # global a1 = S, y
-                            yhat = [[yhat(_λ)(k) for k = keys(y[_λ])] for _λ = keys(y)]
-                            yhat = flatten(yhat)
-                            # println("yhat: $yhat")
-                            y = flatten(y)
-                            # println("y: $y")
-                            Z = sum(abs, y)
+                                        s1, s2 = [S[_λ][k] for k in ks]
+                                        angle(s1 / s2)
+                                    end
+                                for ps = keys(targets[k][_λ])])
+                            for _λ = keys(targets[k])])
+                        err = (x, y) -> angle(cis(x) / cis(y))
+                        yhat = flatten(yhat)
+                        y = flatten(y)
+                        Z = length(y) * convert.(F, 2π)
+                    else
+                        yhat = if "sparams" == string(k)
+                            S
+                        elseif "tparams" == string(k)
+                            fmap(abs2, S)
                         end
-                        # _l = sum(,) do x
-                        #     (x) + x^2
-                        # end
-                        v = err.(yhat, y) / Z
-                        println("$(k) losses: $v ")
-                        # v = v .* @ignore_derivatives softmax(20v) * length(v)
-                        l += sum(v)
-                    end
-                    println("modified total loss: $l\n")
-                    println()
-                    l
-                end
 
-                # f(model)
-                if iters == 1
-                    f(model)
-                    break
-                else
-                    @time global l, (dldm,) = Flux.withgradient(f, model)
+                        # global a1 = S, y
+                        yhat = [[yhat(_λ)(k) for k = keys(y[_λ])] for _λ = keys(y)]
+                        yhat = flatten(yhat)
+                        # println("yhat: $yhat")
+                        y = flatten(y)
+                        # println("y: $y")
+                        Z = sum(abs, y)
+                    end
+                    # _l = sum(,) do x
+                    #     (x) + x^2
+                    # end
+                    v = err.(yhat, y) / Z
+                    println("$(k) losses: $v ")
+                    # v = v .* @ignore_derivatives softmax(20v) * length(v)
+                    l += sum(v)
                 end
+                println("modified total loss: $l\n")
+                println()
+                l
+            end
+
+            # f(model)
+            if iters == 1
+                f(model)
+                break
+            else
+                @time global l, (dldm,) = Flux.withgradient(f, model)
             end
             @assert !isnothing(dldm)
             if !isnothing(stoploss) && l < stoploss
@@ -292,8 +274,8 @@ function picrun(path, array=Array; kw...)
                 for (i, (m, design)) = enumerate(zip(models, designs))
                     # a = Gray.(m() .< 0.5)
 
-                    # Images.save(joinpath(ckptpath, "optimized_design_region_$i.png"), a)
-                    # Images.save(joinpath(path, "optimized_design_region_$i.png"), a)
+                    # Images.save(joinpath(ckptpath, "optimized_canvas_$i.png"), a)
+                    # Images.save(joinpath(path, "optimized_canvas_$i.png"), a)
                 end
                 plotsols(sols, run_probs, (path, ckptpath))
 

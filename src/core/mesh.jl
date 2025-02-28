@@ -95,9 +95,13 @@ function makemesh(mvs, bbox, nres)
     end
 end
 
-function samplemesh(meshvals, points)
+function samplemesh(meshvals, points; z=nothing)
     map(points) do point
-        point = Point(point...)
+        if !isnothing(z)
+            point = Point(point..., z)
+        else
+            point = Point(point...)
+        end
         for (i, (m, v)) = enumerate(meshvals)
             if isnothing(m) || sideof(point, m) == IN
                 return v

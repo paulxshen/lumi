@@ -10,9 +10,11 @@ dl = data["dl"]
 λ = data["center_wavelength"]
 neigs = data["neigs"]
 name = data["name"]
+is2d = data["is2d"]
 
 m, n = eps.shape
-# print(m, n)
+print(m, n)
+
 m += 1
 n += 1
 x = np.linspace(0.5*dl, (m-.5)*dl, m)
@@ -24,12 +26,24 @@ def ϵfunc(x_, y_):
 
 
 tol = 1e-6
-solver = EMpy.modesolvers.FD.VFDModeSolver(
-    λ, x, y, ϵfunc,  "0000").solve(neigs, tol)
+if is2d:
+    solver = EMpy.modesolvers.FD.VFDModeSolver(
+        λ, x, y, ϵfunc,  "0000").solve(neigs, tol)
+    modes = solver.modes
+else:
+    solver = EMpy.modesolvers.FD.VFDModeSolver(
+        λ, x, y, ϵfunc,  "AA00").solve(2*neigs, tol)
+    modes = sorted(solver.modes, key=lambda x: -np.abs(x.neff))
 
+    def f(m):
+        a = m.get_field("Hy", x, y)
+        a = abs(a)
+        return (max(np.std(a, 1)) / np.max(a)) < .1
+    modes = filter(f, modes)
+
+neffs = [np.real(m.neff) for m in modes]
 modes = [{k: m.get_field(k, x, y) for k in [
-    "Ex", "Ey", "Ez", "Hx", "Hy", "Hz"]} for m in solver.modes]
-neffs = [np.real(m.neff) for m in solver.modes]
+    "Ex", "Ey", "Ez", "Hx", "Hy", "Hz"]} for m in modes]
 for i, mode in enumerate(modes):
     # print(mode["Ex"].shape)
     np.savez(os.path.join(path, f'{name}_mode_{i}.npz'), **modes[i])
