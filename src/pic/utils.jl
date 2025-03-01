@@ -36,7 +36,7 @@ function lastrun(name=nothing; study=nothing, wd=joinpath(pwd(), "runs"))
     return p
 end
 
-function calc_sparams(run_probs,)
+function calc_sparams(run_probs, ; kwargs...)
     lminloss = 0
     sols = solve.(run_probs)
 

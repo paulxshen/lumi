@@ -7,7 +7,7 @@ _pmlfracs(a::Real, N) = fill(a, (N, 2))
 _pmlfracs(a::AbstractVector, N) = stack([a[1:N], a[1:N]])
 
 
-function setup(bbox, boundaries, sources, monitors, nres;
+function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
     approx_2D_mode=nothing, z=nothing,
     Ttrans=nothing, Tss=nothing, Tssmin=nothing,
     ϵ=1, μ=1, σ=0, m=0, γ=0, β=0,
@@ -324,7 +324,7 @@ function setup(bbox, boundaries, sources, monitors, nres;
     source_instances = SourceInstance.(sources, (grid,), (ϵ,), (TEMP,); z, mode_solutions,)
     println("making monitors...")
     monitor_instances = MonitorInstance.(monitors, (grid,), (ϵ,), (TEMP,); z, mode_solutions,)
-    ϵeff = nothing
+    canvas_instances = []
 
     if N == 2
         # geometry[:ϵ] = downsample(_geometry.ϵ, int(deltas / dl))
@@ -364,7 +364,8 @@ function setup(bbox, boundaries, sources, monitors, nres;
     geometry = pad_geometry(geometry, padvals, padamts)
     global prob = (;
                       grid,
-                      source_instances, monitor_instances, field_names, approx_2D_mode, Courant,
+                      source_instances, monitor_instances, canvas_instances,
+                      field_names, approx_2D_mode, Courant,
                       Ttrans, Tss,
                       geometry, nmax, nmin,
                       u0, dt, array,) |> pairs |> OrderedDict

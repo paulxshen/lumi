@@ -79,16 +79,25 @@ function insert(a, i, v)
     end
 end
 
-function localframe(u, monitor)
+function localframe(u, monitor; approx_2D_mode=nothing)
     # N = ndims(monitor)
     # if !isnothing(monitor.dimsperm)
     #     permutexyz(u, monitor.dimsperm, N)
     # else
-    u = packxyz(u)
-    u = vmap(u) do v
-        inv(monitor.frame) * v
+    if isnothing(approx_2D_mode)
+        u = packxyz(u)
+        u = vmap(u) do v
+            inv(monitor.frame) * v
+        end
+        u = unpackxyz(u)
+    else
+        Hz = u.Hz
+        u = (E=[u.Ex, u.Ey],)
+        u = vmap(u) do v
+            inv(monitor.frame) * v
+        end
+        u = (Ex=u.E[1], Hy=Hz)
     end
-    u = unpackxyz(u)
     vmap(u) do v
         getindexf.((v,), Tuple.(monitor.plane_Is))
     end
@@ -162,11 +171,13 @@ function solvemodes(ϵ, dl, λ, neigs, path; mode_solutions=nothing)
 
     # if !isfile(joinpath(path, "$(name)_mode_$(neigs-1).npz"))
     println("run empy")
+    is2d = false
     if ndims(ϵ) == 1
+        is2d = true
         ϵ = stack([ϵ, ϵ, ϵ, ϵ])
     end
     npzwrite(joinpath(path, "args.npz"), Dict("eps" => ϵ,
-        "dl" => dl, "center_wavelength" => λ, "neigs" => neigs, "name" => name))
+        "dl" => dl, "center_wavelength" => λ, "neigs" => neigs, "name" => name, "is2d" => is2d))
     fn = joinpath(path, "solvemodes.py")
     try
         run(`python $fn $path`)
@@ -176,8 +187,16 @@ function solvemodes(ϵ, dl, λ, neigs, path; mode_solutions=nothing)
     # end
 
     modes = [npzread(joinpath(path, "$(name)_mode_$(i-1).npz")) for i = 1:neigs]
+    if is2d
+        modes = [
+            vmap(mode) do a
+                mean(a, dims=2) |> vec
+            end for mode in modes
+        ]
+    end
+    modes = [vmap(centroidvals, mode) for mode in modes]
     modes = [merge(mode, OrderedDict(["J$s" => mode["E$s"] .* ϵ for s = "xy"])) for mode in modes]
-    modes = [SortedDict([Symbol(k) => centroidvals(mode(k)) for k = keys(mode) if string(k)[end] in "xy"]) |> pairs |> NamedTuple for mode in modes]
+    modes = [SortedDict([Symbol(k) => mode(k) for k = keys(mode) if string(k)[end] in "xy"]) |> pairs |> NamedTuple for mode in modes]
 
     if !isnothing(mode_solutions)
         println("saving mode solutions")

@@ -43,12 +43,12 @@ end
 function solve(prob, ;
     save_memory=false, ulims=(-3, 3), framerate=nothing, showfield=:Hz, path="", #subpixel=true,
     kwargs...)
-    @unpack approx_2D_mode, dt, u0, geometry, source_instances, monitor_instances, Ttrans, canvases, Tss, grid, array = prob
+    @unpack approx_2D_mode, dt, u0, geometry, source_instances, monitor_instances, Ttrans, canvas_instances, Tss, grid, array = prob
 
     @nograd dt, u0, source_instances, monitor_instances, Ttrans, Tss, grid
     @unpack diffdeltas, diffpadvals, F, N, = grid
 
-    for c = canvases
+    for c = canvas_instances
         apply!(c, geometry)
     end
     p = geometry
@@ -142,7 +142,7 @@ function solve(prob, ;
         @nograd m
         map(um, wavelengths(m)) do um, λ
             um, m = cpu(um), cpu(m)
-            um = localframe(um, m)
+            um = localframe(um, m; approx_2D_mode)
             ap = am = nothing
             if !isnothing(m.λmodes)
                 modes = m.λmodes[λ]

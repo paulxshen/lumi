@@ -59,6 +59,7 @@ function picrun(path, array=Array; kw...)
     epdefault = F(epdefault)
 
     global models = nothing
+    z = nothing
     if N == 2
         # midplane = Plane((0, 0, zcenter), (0, 0, 1))
         # meps = map(meps) do (m, ϵ)
@@ -157,7 +158,7 @@ function picrun(path, array=Array; kw...)
     global run_probs =
         [
             begin
-                setup(bbox / λ, boundaries, sources, monitors, nres;
+                setup(bbox / λ, nres, boundaries, sources, monitors, ;
                     pmlfracs=[1, 1, 0.2], approx_2D_mode, z, array,
                     F, ϵ, TEMP, Ttrans, Tss)
             end for (i, (run, sources, monitors)) in enumerate(zip(runs, runs_sources, runs_monitors))
@@ -170,7 +171,7 @@ function picrun(path, array=Array; kw...)
         global sols
         @unpack S, sols = calc_sparams(run_probs;
             framerate, path)
-        plotsim(run_probs[1], sols[1], ; path)
+        plotsim(run_probs[1] |> cpu, sols[1] |> cpu, ; path=joinpath(path, "sim.png"))
         sol = (; sparam_family(S)...,
             path, study)
         open(SOL, "w") do f

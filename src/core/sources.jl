@@ -173,7 +173,7 @@ function SourceInstance(s::Source, g, ϵ, TEMP; z=nothing, mode_solutions=nothin
 
             mode = packxyz(mode)
             mode = vmap(mode) do v
-                frame * v
+                frame * v[1:N]
             end
             mode = unpackxyz(mode)
             global _gf2 = mode, I
