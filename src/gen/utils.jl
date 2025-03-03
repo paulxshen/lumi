@@ -37,7 +37,7 @@ function lastrun(name=nothing; study=nothing, wd=joinpath(pwd(), "runs"))
 end
 
 function calc_sparams(runs, run_probs, lb, dl,
-    designs=nothing, design_config=nothing, models=nothing; materials=nothing,
+    canvases=nothing, design_config=nothing, models=nothing; materials=nothing,
     alg=nothing, save_memory=false, verbose=false, perturb=nothing, framerate=0, path="", kw...)
     F = run_probs[1].grid.F
     array = run_probs[1].array
@@ -55,7 +55,7 @@ function calc_sparams(runs, run_probs, lb, dl,
 
                 # @unpack ϵeff, _geometry = prob
                 @unpack _geometry = prob
-                prob[:_geometry] = make_geometry(masks, margins, geometry, designs, design_config, materials; F, perturb,)# ϵeff)
+                prob[:_geometry] = make_geometry(masks, margins, geometry, canvases, design_config, materials; F, perturb,)# ϵeff)
             end
             solve(prob; alg, save_memory, verbose, framerate, path)
         end for (i, prob) in enumerate(run_probs)
@@ -101,7 +101,7 @@ function calc_sparams(runs, run_probs, lb, dl,
     # end
     return (; S, sols, lminloss)
 end
-function make_geometry(masks, margins, lb, dl, geometry, designs, design_config, materials; ϵeff=nothing, F=Float32, perturb=nothing)
+function make_geometry(masks, margins, lb, dl, geometry, canvases, design_config, materials; ϵeff=nothing, F=Float32, perturb=nothing)
     isnothing(masks) && return geometry
     mat = design_config.fill.material
     namedtuple([k => begin
@@ -117,7 +117,7 @@ function make_geometry(masks, margins, lb, dl, geometry, designs, design_config,
             b = Zygote.Buffer(a)
             copyto!(b, a)
 
-            for (mask, margin, design) in zip(masks, margins, designs)
+            for (mask, margin, design) in zip(masks, margins, canvases)
 
                 o = round.(Int, (design.bbox[1] - lb) / dl) + 1
                 if ndims(b) == 3

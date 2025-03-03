@@ -176,7 +176,6 @@ function SourceInstance(s::Source, g, ϵ, TEMP; z=nothing, mode_solutions=nothin
                 frame * v[1:N]
             end
             mode = unpackxyz(mode)
-            global _gf2 = mode, I
             mode = namedtuple([
                 k => begin
                     v = mode(k)
@@ -190,7 +189,6 @@ function SourceInstance(s::Source, g, ϵ, TEMP; z=nothing, mode_solutions=nothin
                     end
 
                 end for k = sort(keys(mode))])
-            global _gf3 = mode
             (f, mode)
         end for (sig, mode) = sigmodes]
     # @show center, g.lb, labelpos
@@ -219,9 +217,9 @@ end
 function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g; z)
     @unpack center, dimensions, tags, frame, λmodenums, λmodes, λsmode = sm
     @unpack F, sizes, rulers, all_field_names, offsets, dx = g
-    N = ndims(sm)
 
-    C = complex(g.F)
+    center, dimensions, frame = F.([center, dimensions, frame])
+    N = ndims(sm)
 
     if isa(sm, Source)
         ks = [k for k = all_field_names if string(k)[1] ∈ ('J')]
@@ -229,7 +227,8 @@ function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g; z)
         ks = [k for k = all_field_names if string(k)[1] ∈ ('E', 'H')]
     end
 
-    v = frame * [dimensions..., 0]
+    P = frame[:, 1:end-1]
+    v = P * dimensions
     rulers = rulers[:default]
     start = indexof.(rulers, center - v / 2)
     stop = indexof.(rulers, center + v / 2)
@@ -238,11 +237,8 @@ function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g; z)
     s += s .== 0
     start = s .* (floor.(Int, s .* start))
     stop = s .* (ceil.(Int, s .* stop))
-    box_size = Tuple(abs.(stop - start))
+    box_size = Tuple(max.(1, abs.(stop - start)))
 
-    s = v .>= 0
-    corner = s + .!s .* box_size
-    signed_bbox = [getindex.(rulers, start) getindex.(rulers, stop)]
     signed_plane_rulers = getindex.(rulers, map(start, stop) do a, b
         a == b ? (a:b) : a:sign(b - a):b
     end)
@@ -252,22 +248,21 @@ function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g; z)
     bbox = [getindex.(rulers, start) getindex.(rulers, stop)]
     box_rulers = getindex.(rulers, range.(start, stop))
     box_deltas = diff.(box_rulers)
-    plane_rulers = box_rulers - first.(box_rulers)
 
     global I = dict([k => begin
         l, r = eachcol(offsets[k])
-        range.(start - l, stop - r - 1, box_size)
+        a = start - l
+        range.(a, a + box_size - 1, box_size)
     end for k = ks])
     labelpos = round(Int, indexof.(rulers, center))
 
     # 
     if !isnothing(λmodenums)
         global plane_size = floor.(Int, dimensions / dx)
-        global P = dx * frame[:, 1:end-1]
-        global signed_plane_start = center - P * collect((plane_size - 1) / 2)
+        global signed_plane_start = center - P * dx * F(collect((plane_size - 1) / 2))
 
         global plane_points = map(CartesianIndices(Tuple(plane_size))) do I
-            P * collect(Tuple(I) - 1) + signed_plane_start
+            P * dx * collect(Tuple(I) - 1) + signed_plane_start
         end
         global plane_Is = map(plane_points) do p
             v = indexof.(rulers, p) - start + F(0.5)
@@ -277,6 +272,12 @@ function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g; z)
         plane_deltas = dx
 
         global ϵmode = samplemesh(ϵ, plane_points; z) .|> F
+        if N == 3
+            display(heatmap(ϵmode))
+        else
+            display(plot(ϵmode))
+        end
+
         λmodes = OrderedDict([λ => begin
             modes = solvemodes(ϵmode, dx, λ, maximum(mns) + 1, TEMP; mode_solutions)[mns+1]
             map(modes) do mode
@@ -288,7 +289,6 @@ function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g; z)
                 namedtuple(ks .=> mode.(ks))
             end
         end for (λ, mns) = pairs(λmodenums)])
-        # display(heatmap(ϵmode))
 
         if isa(sm, Monitor)
             λmodes = vmap(λmodes) do modes

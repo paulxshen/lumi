@@ -38,36 +38,19 @@ end
 _size(s::Real, n) = int(s * n)
 _size(s, _) = int(sum(s))
 
-function tensorinv(a::AbstractArray{T}, field_lims, spacings) where {T}
+function tensorinv(a::AbstractArray{T}, ratio) where {T}
     N = ndims(a)
-    # lims = values(field_lims(r"E.*"))
-    lims = @ignore_derivatives [field_lims("E$v") for v = collect("xyz")[1:N]]
-    spacings = _downvec.(spacings, size(a))
-
-    border = 0
-    margin = map(spacings) do s
-        (1 + border) * max(first(s), last(s))
-    end
-    ap = pad(a, :replicate, margin)
+    # spacings = _downvec.(spacings, size(a))
 
     v = map(1:N) do i
         map(1:i) do j
-            li, ri = eachcol(lims[i])
-            lj, rj = eachcol(lims[j])
-            l = min.(li, lj) - 0.5
-            _l = max.(li, lj) + 0.5
-            Δ = _l - l
-            start = round((l + 1) * margin) + 1
+            # ranges = [[
+            #     range(cum - space + 1, int(Δi .* space) + cum - space)
+            #     for (cum, space) = zip(cumsum(spacing), spacing)
+            # ] for (Δi, spacing) = zip(Δ, spacings)]
 
-            # global _d = Δ, spacings, lims
 
-            api = ap[range.(start, start + sum.(spacings) + int((Δ - 1) * last.(spacings)) - 1)...]
-            ranges = [[
-                range(cum - space + 1, int(Δi .* space) + cum - space)
-                for (cum, space) = zip(cumsum(spacing), spacing)
-            ] for (Δi, spacing) = zip(Δ, spacings)]
-
-            downsample_by_range(api, ranges) do a
+            downsample(a, ratio) do a
                 p, q = extrema(a)
                 p == q & return (i == j) / p
 

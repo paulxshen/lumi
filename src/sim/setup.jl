@@ -324,7 +324,7 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
     source_instances = SourceInstance.(sources, (grid,), (ϵ,), (TEMP,); z, mode_solutions,)
     println("making monitors...")
     monitor_instances = MonitorInstance.(monitors, (grid,), (ϵ,), (TEMP,); z, mode_solutions,)
-    canvas_instances = []
+    canvas_instances = CanvasInstance.(canvases, (grid,), (geometry,), ; z)
 
     if N == 2
         # geometry[:ϵ] = downsample(_geometry.ϵ, int(deltas / dl))

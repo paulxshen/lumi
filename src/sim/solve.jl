@@ -40,7 +40,7 @@ function f2(((u, um), p, (dt, diffdeltas, diffpadvals, source_instances,), (t0, 
     ((u, um), p, (dt, diffdeltas, diffpadvals, source_instances,), (t0, T, monitor_instances))
 end
 
-function solve(prob, ;
+function solve(prob, models=nothing;
     save_memory=false, ulims=(-3, 3), framerate=nothing, showfield=:Hz, path="", #subpixel=true,
     kwargs...)
     @unpack approx_2D_mode, dt, u0, geometry, source_instances, monitor_instances, Ttrans, canvas_instances, Tss, grid, array = prob
@@ -49,7 +49,7 @@ function solve(prob, ;
     @unpack diffdeltas, diffpadvals, F, N, = grid
 
     for c = canvas_instances
-        apply!(c, geometry)
+        apply_canvas!(c, geometry, models)
     end
     p = geometry
 

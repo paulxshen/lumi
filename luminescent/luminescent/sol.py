@@ -119,8 +119,8 @@ def load_solution(path, show=True):
         if prob["study"] == "sparams":
             pass
         elif prob["study"] == "inverse_design":
-            l = [np.array(d) for d in sol["optimized_designs"]]
-            sol["optimized_designs"] = l
+            l = [np.array(d) for d in sol["optimized_canvases"]]
+            sol["optimized_canvases"] = l
             print(
                 f"loading optimized design regions at resolution {sol['dl']}")
             # for i, a in enumerate(l):
@@ -150,7 +150,7 @@ def load_solution(path, show=True):
                     break
 
             _sol = {k: sol[k] for k in ["T", "dB", "S", "phasors", "path", ]}
-            _sol["optimized_designs"] = "[[...]]"
+            _sol["optimized_canvases"] = "[[...]]"
             pprint(_sol)
 
     if show:

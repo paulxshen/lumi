@@ -18,9 +18,10 @@ def make_pic_inv_problem(path, c,  targets, iters=10,
                          weights=dict(),
                          eta=.4, init=1,   stoploss=None,
                          canvas_layer=DESIGN_LAYER,
-                         #    design_guess_layer=LAYER.GUESS,
-                         fill_layer=LAYER.WG,
-                         void_layer=None,
+                         fill_material=None, void_material=None,
+                         materials=MATERIALS,
+                         #  fill_layer=LAYER.WG,
+                         #  void_layer=None,
                          layer_stack=SOI,
                          restart=True, save_memory=False, **kwargs):
     canvas_layer = tuple(canvas_layer)
@@ -114,8 +115,14 @@ def make_pic_inv_problem(path, c,  targets, iters=10,
 
     def _bbox(b):
         return [[b.left/1e3, b.bottom/1e3], [b.right/1e3, b.top/1e3]]
-    prob["designs"] = [
+
+    ks = set(materials[fill_material].keys()).intersection(
+        set(materials[void_material].keys()))
+    swaps = {k: (materials[fill_material][k],
+                 materials[void_material][k]) for k in ks}
+    prob["canvases"] = [
         {
+            "swaps": swaps,
             "layer": canvas_layer,
             "bbox": _bbox(p.bbox()),
             "symmetries": s,
@@ -126,11 +133,11 @@ def make_pic_inv_problem(path, c,  targets, iters=10,
     prob["lsolid"] = lsolid
     prob["stoploss"] = stoploss
     prob["design_config"] = dict()
-    l = get_layers(layer_stack, fill_layer)[0]
-    d = {"thickness": l.thickness,
-         "material": matname(l.material), "zmin": l.zmin}
-    d["layer"] = fill_layer
-    prob["design_config"]["fill"] = d
+    # l = get_layers(layer_stack, fill_layer)[0]
+    # d = {"thickness": l.thickness,
+    #      "material": matname(l.material), "zmin": l.zmin}
+    # d["layer"] = fill_layer
+    # prob["design_config"]["fill"] = d
 
     # if void_layer is not None:
     #     l = get_layers(layer_stack, void_layer)[0]
@@ -156,7 +163,7 @@ def apply_design(c0,  sol):
     a.add_ref(c0)
     fill = sol["design_config"]["fill"]["layer"]
     dl = sol["design_config"]["canvas_layer"]
-    for i, d in enumerate(sol["designs"]):
+    for i, d in enumerate(sol["canvases"]):
         x0, y0 = d["bbox"][0]
         x1, y1 = d["bbox"][1]
         b = gf.Component()

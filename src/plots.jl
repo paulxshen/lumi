@@ -23,14 +23,16 @@ function plotfield(args...; axis=(;), rulers, kwargs...)
     N = ndims(u)
     if N == 2
         a = u
-        axis = (; axis..., aspect=size(a, 1) / size(a, 2))
+        axis = (; axis..., aspect=(rulers[1][end] - rulers[1][1]) / (rulers[2][end] - rulers[2][1]))
 
         heatmap(fig, rulers..., a; axis, kwargs...)
     elseif N == 3
         for i in 1:3
             a = selectdim(u, i, round(Int, size(u, i) / 2))
-            axis = (; axis..., aspect=size(a, 1) / size(a, 2))
-            heatmap(fig[1, i], rulers[deleteat!(collect(1:3), i)]..., a; axis, kwargs...)
+            rs = rulers[deleteat!(collect(1:3), i)]
+            axis = (; axis..., aspect=(rs[1][end] - rs[1][1]) / (rs[2][end] - rs[2][1]))
+
+            heatmap(fig[1, i], rs..., a; axis, kwargs...)
         end
     end
 end

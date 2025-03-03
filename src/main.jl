@@ -16,6 +16,7 @@ include("core/sources.jl")
 include("core/monitors.jl")
 include("core/geometry.jl")
 include("core/mesh.jl")
+include("core/canvases.jl")
 
 include("sim/setup.jl")
 include("sim/solve.jl")

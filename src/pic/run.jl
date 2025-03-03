@@ -29,7 +29,7 @@ function picrun(path, array=Array; kw...)
     end
     @unpack name, N, approx_2D_mode, dtype, center_wavelength, runs, ports, study, zmin, zmax, zcenter, magic, framerate, layer_stack, materials, Ttrans, Tss, bbox, epdefault, nres = prob
     if study == "inverse_design"
-        @unpack lsolid, lvoid, designs, targets, weights, eta, iters, restart, save_memory, design_config, stoploss = prob
+        @unpack canvases, lsolid, lvoid, targets, weights, eta, iters, restart, save_memory, design_config, stoploss = prob
     end
 
     F = Float32
@@ -82,39 +82,6 @@ function picrun(path, array=Array; kw...)
         else
             sol = nothing
         end
-        models = [
-            begin
-                @unpack bbox = design
-                dimensions = bbox[2] - bbox[1]
-                szd = Tuple(round.(Int, dimensions / dl)) # design region size
-                symmetries = map(design.symmetries) do s
-                    try
-                        Int(s) + 1
-                    catch
-                        try
-                            parse(Int, s) + 1
-                        catch
-                            s
-                        end
-                    end
-                end
-
-                frame = ϵ2
-                # display(heatmap(frame))
-                # error("not implemented")
-                frame = frame .>= 0.99maximum(frame)
-                # frame = nothing
-                start = round((bbox[1] - lb) / dl + 1)
-                b = Blob(szd; solid_frac=1, lsolid=lsolid / dl, lvoid=lvoid / dl, symmetries, F, frame, start, morph=false)
-                display(heatmap(b.frame))
-
-                if !isnothing(sol) && !restart
-                    println("loading saved design...")
-                    b.p .= sol.params[i]
-                end
-                b
-            end for (i, design) = enumerate(designs)
-        ]
     end
 
     boundaries = [] # unspecified boundaries default to PML
@@ -154,11 +121,25 @@ function picrun(path, array=Array; kw...)
 
             Monitor(center, dimensions, frame, λ; λmodenums, port, label="m$(string(port)[2:end])", wavelength_mode_numbers)
         end for (port, m) = SortedDict(run.monitors) |> pairs] for run in runs]
-
+    if study == "inverse_design"
+        canvases = map(enumerate(canvases)) do (i, c)
+            @unpack bbox, symmetries, swaps = c
+            bbox = stack(bbox)
+            if !isnothing(sol) && !restart
+                println("loading saved design...")
+                params = sol.params[i]
+            else
+                params = nothing
+            end
+            Canvas(swaps, bbox, lvoid, lsolid, symmetries, λ; params)
+        end
+    else
+        canvases = []
+    end
     global run_probs =
         [
             begin
-                setup(bbox / λ, nres, boundaries, sources, monitors, ;
+                setup(bbox / λ, nres, boundaries, sources, monitors, canvases;
                     pmlfracs=[1, 1, 0.2], approx_2D_mode, z, array,
                     F, ϵ, TEMP, Ttrans, Tss)
             end for (i, (run, sources, monitors)) in enumerate(zip(runs, runs_sources, runs_monitors))
@@ -178,13 +159,15 @@ function picrun(path, array=Array; kw...)
             write(f, json(cpu(sol)))
         end
     elseif study == "inverse_design"
+
         ENV["autodiff"] = "1"
         if N == 3
             if magic != "summersale"
                 error("3D inverse design feature must be requested from Luminescent AI info@luminescentai.com")
             end
         end
-        model = models[1]
+        prob = run_probs[1]
+        model = prob.canvas_instances[1].model
         # minchange = 0.001
         global opt = AreaChangeOptimiser(
             model; opt=Optimisers.Momentum(1, 0.7),
@@ -199,7 +182,7 @@ function picrun(path, array=Array; kw...)
             stop = i == iters
             function f(model)
                 models = [model]
-                res = calc_sparams(run_probs;
+                res = calc_sparams(run_probs, models;
                     save_memory, path, framerate)
                 # return res
                 @unpack S, sols = res
@@ -272,7 +255,7 @@ function picrun(path, array=Array; kw...)
 
                 mkpath(ckptpath)
                 models = [model]
-                for (i, (m, design)) = enumerate(zip(models, designs))
+                for (i, (m, design)) = enumerate(zip(models, canvases))
                     # a = Gray.(m() .< 0.5)
 
                     # Images.save(joinpath(ckptpath, "optimized_canvas_$i.png"), a)
@@ -282,9 +265,9 @@ function picrun(path, array=Array; kw...)
 
                 sol = (;
                     sparam_family(S)...,
-                    optimized_designs=[m() .> 0.5 for m in models], dl,
+                    optimized_canvases=[m() .> 0.5 for m in models], dl,
                     params=getfield.(models, :p),
-                    designs,
+                    canvases,
                     design_config, path,
                     dx,
                     study,

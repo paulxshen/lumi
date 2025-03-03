@@ -36,9 +36,9 @@ function lastrun(name=nothing; study=nothing, wd=joinpath(pwd(), "runs"))
     return p
 end
 
-function calc_sparams(run_probs, ; kwargs...)
+function calc_sparams(run_probs, models=nothing; kwargs...)
     lminloss = 0
-    sols = solve.(run_probs)
+    sols = solve.(run_probs, (models,))
 
     ignore_derivatives() do
     end
@@ -78,7 +78,7 @@ function calc_sparams(run_probs, ; kwargs...)
     # end
     return (; S, sols, lminloss)
 end
-function make_geometry(masks, margins, lb, dl, geometry, designs, design_config, materials; ϵeff=nothing, F=Float32, perturb=nothing)
+function make_geometry(masks, margins, lb, dl, geometry, canvases, design_config, materials; ϵeff=nothing, F=Float32, perturb=nothing)
     isnothing(masks) && return geometry
     mat = design_config.fill.material
     namedtuple([k => begin
@@ -94,7 +94,7 @@ function make_geometry(masks, margins, lb, dl, geometry, designs, design_config,
             b = Zygote.Buffer(a)
             copyto!(b, a)
 
-            for (mask, margin, design) in zip(masks, margins, designs)
+            for (mask, margin, design) in zip(masks, margins, canvases)
 
                 o = round.(Int, (design.bbox[1] - lb) / dl) + 1
                 if ndims(b) == 3

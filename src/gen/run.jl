@@ -16,7 +16,7 @@ function genrun(path, array=Array; kw...)
     end
     @unpack dorun, dtype, center_wavelength, dl, dx, xs, ys, zs, study, layer_stack, sources, monitors, materials, L, Ttrans, Tss, Tssmin, wavelengths, frequencies, df = prob
     if study == "inverse_design"
-        @unpack lsolid, lvoid, designs, targets, weights, eta, iters, restart, save_memory, design_config, stoploss = prob
+        @unpack lsolid, lvoid, canvases, targets, weights, eta, iters, restart, save_memory, design_config, stoploss = prob
     end
 
     ratio = int(dx / dl)
