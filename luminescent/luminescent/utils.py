@@ -1,4 +1,4 @@
-import time
+import os
 import pymeshfix
 import json
 from statistics import median
@@ -198,28 +198,29 @@ def stl_to_array(mesh: pv.PolyData, dl: float, bbox):
     stop = [min(round(a), u) for a, u in zip(stop, r.shape)]
     len = [s-t for s, t in zip(stop, start)]
 
-    r[start[0]:stop[0], start[1]:stop[1], start[2]:stop[2]] = mask[:len[0], :len[1], :len[2]]
+    r[start[0]:stop[0], start[1]:stop[1], start[2]        :stop[2]] = mask[:len[0], :len[1], :len[2]]
     return r
 
 
-def material_voxelate(c,  zmin, zmax, layers, layer_stack, path, unit=1):
+def material_voxelate(c,  zmin, zmax, layers, layer_stack, path):
     stacks = sum([[[v.mesh_order, v.material, tuple(layer), k]
                  for k, v in get_layers(layer_stack, layer, withkey=True)] for layer in layers], [])
     c.flatten()
     stacks = sorted(stacks, key=lambda x: -x[0])
     layer_stack_info = dict()
-    # c.show()
+    c.show()
     # raise NotImplementedError("This is a stub")
     lb, ub = c.bbox_np()
     # bbox = [[**lb, zmin], [**ub, zmax]]
     bbox = [[lb[0], lb[1], zmin], [ub[0], ub[1], zmax]]
+    layers = [x[2] for x in stacks]
     for i, stack in enumerate(stacks):
         order = stack[0]
         m = stack[1]
         l1, l2 = layer = stack[2]
         k = stack[3]
 
-        _layer_stack = copy.deepcopy(LAYER_STACK)
+        _layer_stack = copy.deepcopy(layer_stack)
         get(_layer_stack, 'layers').clear()
 
         d = copy.deepcopy(get(layer_stack, 'layers')[k])
@@ -230,7 +231,10 @@ def material_voxelate(c,  zmin, zmax, layers, layer_stack, path, unit=1):
             # _d.bounds = (_d.zmin, _d.zmin+_d.thickness)
             # origin = (c.extract([layer]).bbox_np()-c.bbox_np())[0].tolist()
 
-            mesh = c.to_3d()
+            mesh = c.to_3d(
+                layer_stack=_layer_stack,
+                layer_views=LAYER_VIEWS,
+                exclude_layers=set(layers)-{layer})
             OBJ = os.path.join(path, f'{order}_{m}_{k}.obj')
             trimesh.exchange.export.export_mesh(mesh, OBJ, 'obj')
             pymeshfix.clean_from_file(OBJ, OBJ)

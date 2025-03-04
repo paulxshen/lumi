@@ -14,6 +14,7 @@ function makemesh(mvs, bbox, nres)
     global rulers = [[(a, last(mvs)[2]), (b, nothing)] for (a, b) = eachrow(bbox)]
     for (m, v) = reverse(mvs)[2:end]
         x = boundingbox(m)
+        @show x
         a = ustrip.(getfield(coords(x.min), :coords))
         b = ustrip.(getfield(coords(x.max), :coords))
         for (ruler, a, b) = zip(rulers, a, b)
@@ -89,7 +90,7 @@ function makemesh(mvs, bbox, nres)
             end
         end
     end
-    map(zip(rulers, deltas)) do (r, v)
+    global r = map(zip(rulers, deltas)) do (r, v)
         start = r[1][1]
         [start, (start + cumsum(reduce(vcat, v)))...]
     end

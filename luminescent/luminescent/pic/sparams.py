@@ -11,7 +11,7 @@ from gdsfactory.cross_section import Section
 from gdsfactory.generic_tech import LAYER_STACK, LAYER
 
 
-def make_pic_sim_problem(path, c: gf.Component, nres,
+def make_pic_sim_problem(path, c, nres,
                          wavelengths,
                          entries=None, keys=None,
                          layer_stack=SOI,
@@ -20,9 +20,10 @@ def make_pic_sim_problem(path, c: gf.Component, nres,
                          wavelength=None,
                          wl_res=.01,
                          **kwargs):
+    # c.show()
+    # raise NotImplementedError("This is a stub")
     if wavelength:
         raise ValueError("wavelength is deprecated, use wavelengths instead")
-
     ports = [p.name for p in c.get_ports_list(prefix="o")]
 
     if not entries:

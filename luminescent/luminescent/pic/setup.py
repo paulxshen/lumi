@@ -24,15 +24,13 @@ def setup(path, c, study, nres, center_wavelength,
           runs=[],  sources=[],
           layer_stack=SOI, materials=dict(),
           default_material='SiO2',
-          exclude_layers=[
-              DESIGN_LAYER, GUESS], Courant=None,
+          exclude_layers=[], Courant=None,
           gpu=None, dtype=np.float32,
           plot=False, framerate=None,
           magic="", wd=os.path.join(os.getcwd(), "runs"), name=None,
           Ttrans=None,
           approx_2D_mode=False):
     materials = {**MATERIALS, **materials}
-
     prob = {
         'nres': nres,
         'center_wavelength': center_wavelength,
@@ -130,6 +128,7 @@ def setup(path, c, study, nres, center_wavelength,
     prob["zcore"] = zcore
     # prob["L"] = [l, w, h]
 
+    c.show()
     _c = gf.Component()
     kwargs = dict()
     for (orientation, side, length, p) in zip([0, 90, 180, 270], ["right", "top", "left", "bottom"], margins, ps):

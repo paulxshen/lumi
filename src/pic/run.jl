@@ -45,7 +45,7 @@ function picrun(path, array=Array; kw...)
     println("using $F")
 
     bbox = stack(bbox)
-
+    @show N
     @show λ = F(center_wavelength)
 
     layer_stack = sort(collect(pairs(layer_stack)), by=kv -> kv[2].mesh_order) |> OrderedDict
@@ -66,6 +66,7 @@ function picrun(path, array=Array; kw...)
         #     m ∩ midplane, ϵ
         # end
         z = mean(bbox[3, :])
+        bbox3 = bbox
         bbox = bbox[1:2, :]
     end
     meps = collect(Tuple{Any,Any}, meps)
@@ -123,15 +124,17 @@ function picrun(path, array=Array; kw...)
         end for (port, m) = SortedDict(run.monitors) |> pairs] for run in runs]
     if study == "inverse_design"
         canvases = map(enumerate(canvases)) do (i, c)
-            @unpack bbox, symmetries, swaps = c
-            bbox = stack(bbox)
+            @unpack symmetries, swaps = c
             if !isnothing(sol) && !restart
                 println("loading saved design...")
                 params = sol.params[i]
             else
                 params = nothing
             end
-            Canvas(swaps, bbox, lvoid, lsolid, symmetries, λ; params)
+            swaps = kvmap(swaps) do k, v
+                Symbol(togreek(k)) => v
+            end
+            Canvas(swaps, stack(c.bbox), lvoid, lsolid, symmetries, λ; params)
         end
     else
         canvases = []

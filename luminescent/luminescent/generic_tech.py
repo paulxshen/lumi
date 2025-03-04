@@ -42,7 +42,7 @@ thickness_clad = 0.5
 layer_core = LogicalLayer(layer=LAYER.WG)
 layer_clad = LogicalLayer(layer=LAYER.WGCLAD)
 layer_box = LogicalLayer(layer=LAYER.BOX)
-design_layer = LogicalLayer(layer=DESIGN_LAYER)
+CANVAS_LAYER = LogicalLayer(layer=CANVAS_LAYER)
 
 LAYER_STACK.layers.update(dict(
     core=LayerLevel(
@@ -67,7 +67,7 @@ LAYER_STACK.layers.update(dict(
         mesh_order=10,
     ),
     design=LayerLevel(
-        layer=design_layer,
+        layer=CANVAS_LAYER,
         zmin=0.0,
         material=None,
         thickness=.0001,
@@ -79,6 +79,7 @@ pdk = get_generic_pdk()
 pdk.activate()
 LAYER_VIEWS = pdk.layer_views
 LAYER_VIEWS.layer_views["WGCLAD"].visible = True
+LAYER_VIEWS.layer_views["canvas"] = LayerView(layer=CANVAS_LAYER, visible=True)
 # for l in LAYER_STACK.layers.values():
 #     print(l.layer)
 #     print(l.layer.layer)

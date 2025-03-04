@@ -40,27 +40,23 @@ _size(s, _) = int(sum(s))
 
 function tensorinv(a::AbstractArray{T}, ratio) where {T}
     N = ndims(a)
+    In = LinearAlgebra.I(N)
     # spacings = _downvec.(spacings, size(a))
+    a = downsample(a, ratio) do a
+        p, q = extrema(a)
+        p == q & return In / p
 
+        n = imnormal(v)
+        P = n * n'
+        P * mean(1 ./ a) + (In - P) / mean(a)
+    end
     v = map(1:N) do i
         map(1:i) do j
-            # ranges = [[
-            #     range(cum - space + 1, int(Δi .* space) + cum - space)
-            #     for (cum, space) = zip(cumsum(spacing), spacing)
-            # ] for (Δi, spacing) = zip(Δ, spacings)]
-
-
-            downsample(a, ratio) do a
-                p, q = extrema(a)
-                p == q & return (i == j) / p
-
-                n = imnormal(v)
-                Pij = n[i] * n[j]
-                Pij * mean(1 ./ a) + ((i == j) - Pij) / mean(a)
-            end |> T
+            map(a) do v
+                v(i, j)
+            end
         end
     end
-
     [j <= i ? v[i][j] : v[j][i] for i = 1:N, j = 1:N]
 end
 

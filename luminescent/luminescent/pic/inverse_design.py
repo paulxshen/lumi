@@ -17,14 +17,19 @@ def make_pic_inv_problem(path, c,  targets, iters=10,
                          lvoid=0, lsolid=0, symmetries=[],
                          weights=dict(),
                          eta=.4, init=1,   stoploss=None,
-                         canvas_layer=DESIGN_LAYER,
+                         canvas_layer=CANVAS_LAYER,
                          fill_material=None, void_material=None,
                          materials=MATERIALS,
                          #  fill_layer=LAYER.WG,
                          #  void_layer=None,
                          layer_stack=SOI,
                          restart=True, save_memory=False, **kwargs):
+    # c.show()
     canvas_layer = tuple(canvas_layer)
+    layer_stack = deepcopy(layer_stack)
+    layer_stack.layers["canvas"] = deepcopy(layer_stack.layers['core'])
+    layer_stack.layers["canvas"].layer.layer = canvas_layer
+    # layer_stack.layers["canvas"].layer.layer = canvas_layer
     # if not N:
     #     raise NotImplementedError(
     #         "3D inverse design feature must be requested from Luminescent AI info@luminescentai.com")
@@ -79,6 +84,9 @@ def make_pic_inv_problem(path, c,  targets, iters=10,
         wavelengths = list(wavelengths)
 
     wavelengths0 = deepcopy(wavelengths)
+    # c.show()
+    # raise ValueError()
+    c.flatten()
     prob = make_pic_sim_problem(path, c,
                                 layer_stack=layer_stack,
                                 wavelengths=wavelengths,
@@ -124,7 +132,7 @@ def make_pic_inv_problem(path, c,  targets, iters=10,
         {
             "swaps": swaps,
             "layer": canvas_layer,
-            "bbox": _bbox(p.bbox()),
+            'bbox': _bbox(p.bbox()),
             "symmetries": s,
             "init": init,
         } for p, s in zip(list(polys.values())[0], symmetries)
@@ -164,8 +172,8 @@ def apply_design(c0,  sol):
     fill = sol["design_config"]["fill"]["layer"]
     dl = sol["design_config"]["canvas_layer"]
     for i, d in enumerate(sol["canvases"]):
-        x0, y0 = d["bbox"][0]
-        x1, y1 = d["bbox"][1]
+        x0, y0 = d['bbox'][0]
+        x1, y1 = d['bbox'][1]
         b = gf.Component()
         b.add_polygon(
             [(x0, y0), (x1, y0), (x1, y1), (x0, y1)], layer=fill)

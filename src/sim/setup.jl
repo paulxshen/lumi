@@ -123,7 +123,7 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
         end...
     ])
     boundvals = OrderedDict([
-        :default => zeroarray(),
+        # :default => zeroarray(),
         map(field_names) do k
             k => nothingarray()
         end...
@@ -141,8 +141,6 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
             k => zeroarray()
         end...
     ])
-
-    edges = OrderedDict([k => zeros(Bool, N, 2) for k = field_names])
 
     for b = boundaries
         for i = b.dims
@@ -248,10 +246,11 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
         end
     end
 
-
+    edges = OrderedDict()
     for (k, v) = pairs(boundvals)
         edges[k] = !isnothing.(v)
     end
+    edges[:default] = zeros(Bool, N, 2)
 
     add_current_keys!(sizes)
 
@@ -318,6 +317,8 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
     dx = F(1 / nres / nmax)
     sizes = vmap(Tuple, sizes)
     global grid = (; rulers, deltas, sizes, edges, offsets, boundvals, diffpadvals, diffdeltas, padvals, padamts, F, N, field_names, all_field_names, dx) |> pairs |> OrderedDict
+    geometry = pad_geometry(geometry, padvals, padamts) |> pairs |> OrderedDict
+
 
     println("making sources...")
     mode_solutions = []
@@ -361,7 +362,6 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
 
     @show Ttrans, Tss
     Ttrans, Tss = convert.(F, (Ttrans, Tss))
-    geometry = pad_geometry(geometry, padvals, padamts)
     global prob = (;
                       grid,
                       source_instances, monitor_instances, canvas_instances,
