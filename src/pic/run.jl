@@ -52,7 +52,7 @@ function picrun(path, array=Array; kw...)
     ks = keys(layer_stack)
     fns = readdir(joinpath(path, "surfaces"), join=true)
     sort!(fns)
-    @show fns
+    @debug fns
     global meshes = getfield.(GeoIO.load.(fns, numbertype=F), :domain) .|> (Scale(1 / λ, 1 / λ, 1 / λ,),)
     global eps = [materials(string(split(basename(fn), "_")[2])).epsilon |> F for fn = fns]
     meps = zip(meshes, eps)
@@ -139,7 +139,7 @@ function picrun(path, array=Array; kw...)
     else
         canvases = []
     end
-    global run_probs =
+    global probs =
         [
             begin
                 setup(bbox / λ, nres, boundaries, sources, monitors, canvases;
@@ -151,25 +151,24 @@ function picrun(path, array=Array; kw...)
     # error("not implemented")
     t0 = time()
     println("compiling simulation code...")
-    global sols
     if study == "sparams"
-        @unpack S, sols = calc_sparams(run_probs;
+        @unpack S, sols = calc_sparams(probs;
             framerate, path)
-        plotsim(run_probs[1] |> cpu, sols[1] |> cpu, ; path=joinpath(path, "sim.png"))
+        plotsim(probs[1] |> cpu, sols[1] |> cpu, ; path=joinpath(path, "sim.png"))
         sol = (; sparam_family(S)...,
             path, study)
         open(SOL, "w") do f
             write(f, json(cpu(sol)))
         end
     elseif study == "inverse_design"
-
+        PLOT = joinpath(path, "sim.png")
         ENV["autodiff"] = "1"
         if N == 3
             if magic != "summersale"
                 error("3D inverse design feature must be requested from Luminescent AI info@luminescentai.com")
             end
         end
-        prob = run_probs[1]
+        prob = probs[1]
         model = prob.canvas_instances[1].model
         # minchange = 0.001
         global opt = AreaChangeOptimiser(
@@ -186,11 +185,13 @@ function picrun(path, array=Array; kw...)
             stop = i == iters
             function f(model)
                 models = [model]
-                res = calc_sparams(run_probs, models;
+                res = calc_sparams(probs, models;
                     save_memory, path, framerate)
-                global sols
+                @debug targets
                 # return res
-                @unpack S, sols = res
+                # @unpack S, sols = res
+                global sols = res.sols
+                global S = res.S
                 l = 0
                 for k = keys(targets)
                     y = targets[k]
@@ -256,34 +257,28 @@ function picrun(path, array=Array; kw...)
             end
             if true# i == 1 || i % 2 == 0 || stop
                 println("saving checkpoint...")
-                ckptpath = joinpath(path, "checkpoints", replace(string(now()), ':' => '_', '.' => '_'))
+                CKPT = joinpath(path, "checkpoints", replace(string(now()), ':' => '_', '.' => '_'))
 
-                mkpath(ckptpath)
+                mkpath(CKPT)
                 models = [model]
-                for (i, (m, design)) = enumerate(zip(models, canvases))
-                    # a = Gray.(m() .< 0.5)
-
-                    # Images.save(joinpath(ckptpath, "optimized_canvas_$i.png"), a)
-                    # Images.save(joinpath(path, "optimized_canvas_$i.png"), a)
-                end
-
+                global S, sols
                 sol = (;
                     sparam_family(S)...,
-                    optimized_canvases=[m() .> 0.5 for m in models], dl,
-                    params=getfield.(models, :p),
-                    canvases,
-                    design_config, path,
-                    dx,
-                    study,
-                )
+                    params=map(prob.canvas_instances) do c
+                        c.model.p |> cpu
+                    end,
+                    path, study)
+                open(SOL, "w") do f
+                    write(f, json(cpu(sol)))
+                end
 
-                open(joinpath(ckptpath, "solution.json"), "w") do f
+                open(joinpath(CKPT, "solution.json"), "w") do f
                     write(f, json(cpu(sol)))
                 end
-                open(joinpath(path, "solution.json"), "w") do f
-                    write(f, json(cpu(sol)))
-                end
+                println("T-params: ")
                 println(json(sol.T, 4))
+                plotsim(probs[1] |> cpu, sols[1] |> cpu, ; path=PLOT)
+
             end
             if stop
                 break
@@ -297,14 +292,13 @@ function picrun(path, array=Array; kw...)
             println("====\n")
         end
         println("Done in $(time() - t0) .")
-        plotsim(run_probs[1] |> cpu, sols[1] |> cpu, ; path=joinpath(path, "sim.png"))
+        # global sols
+        # plotsim(probs[1] |> cpu, sols[1] |> cpu, ; path=PLOT)
     end
     # if length(sol.T) > 1
     #     println("wavelengths may have been adjusted to facilitate simulation.")
     # end
-    sol = sols[1]
-    println("T-params: ")
-    println(JSON.json(sol.T, 4))
+    # global sols
+    # sol = sols[1]
     # println(sol)
-    sol
 end

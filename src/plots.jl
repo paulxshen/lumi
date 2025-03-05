@@ -52,5 +52,8 @@ function plotsim(prob, sol, field_names=[:Hz], geometry_names=[:ϵ]; path=nothin
     end
 
     display(fig)
-    !isnothing(path) && CairoMakie.save(joinpath(path), fig)
+    if !isnothing(path)
+        CairoMakie.save(joinpath(path), fig)
+        println("plot saved to $path")
+    end
 end

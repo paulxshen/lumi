@@ -2,6 +2,7 @@
 include("main.jl")
 ENV["JULIA_SSL_CA_ROOTS_PATH"] = ""
 ENV["JULIA_PKG_PRECOMPILE_AUTO"] = 0
+ENV["JULIA_DEBUG"] = "Main"
 Random.seed!(1234)
 using CUDA
 RUNS = joinpath("build", "precompile_execution")

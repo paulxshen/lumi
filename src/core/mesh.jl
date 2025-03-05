@@ -9,12 +9,12 @@ function transit(a::T, b) where {T}
 end
 
 function makemesh(mvs, bbox, nres)
-    global _sfda = mvs, bbox, nres
+    # global _sfda = mvs, bbox, nres
     N = size(bbox, 1)
-    global rulers = [[(a, last(mvs)[2]), (b, nothing)] for (a, b) = eachrow(bbox)]
+    rulers = [[(a, last(mvs)[2]), (b, nothing)] for (a, b) = eachrow(bbox)]
     for (m, v) = reverse(mvs)[2:end]
         x = boundingbox(m)
-        @show x
+        @debug x
         a = ustrip.(getfield(coords(x.min), :coords))
         b = ustrip.(getfield(coords(x.max), :coords))
         for (ruler, a, b) = zip(rulers, a, b)
@@ -30,7 +30,7 @@ function makemesh(mvs, bbox, nres)
             end
         end
     end
-    global deltas = map(rulers) do ruler
+    deltas = map(rulers) do ruler
         map(enumerate(ruler[1:end-1])) do (i, (a, v))
             b = ruler[i+1][1]
             d = b - a
@@ -90,7 +90,7 @@ function makemesh(mvs, bbox, nres)
             end
         end
     end
-    global r = map(zip(rulers, deltas)) do (r, v)
+    r = map(zip(rulers, deltas)) do (r, v)
         start = r[1][1]
         [start, (start + cumsum(reduce(vcat, v)))...]
     end

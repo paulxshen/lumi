@@ -40,7 +40,7 @@ else:
 neffs = [np.real(m.neff) for m in modes]
 modes = [{k: m.get_field(k, x, y) for k in [
     "Ex", "Ey", "Ez", "Hx", "Hy", "Hz"]} for m in modes]
-print(modes[0]["Ex"].shape)
+# print(modes[0]["Ex"].shape)
 for i, mode in enumerate(modes):
     # print(mode["Ex"].shape)
     np.savez(os.path.join(path, f'{name}_mode_{i}.npz'), **modes[i])

@@ -19,6 +19,6 @@ picrun(lastrun(name="1x2_splitter"))
 # heatmap(abs.(mode_solutions[1].calibrated_modes[1].Ex))
 # # volume(abs.(sols[1].u.Ey))
 # using GLMakie
-# volume(abs.(run_probs[1].source_instances[1]._g.Jy))
-# heatmap(sum(abs.(run_probs[1].source_instances[1]._g.Jy), dims=1)[1, :, :])
+# volume(abs.(probs[1].source_instances[1]._g.Jy))
+# heatmap(sum(abs.(probs[1].source_instances[1]._g.Jy), dims=1)[1, :, :])
 

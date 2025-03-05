@@ -36,16 +36,16 @@ function lastrun(name=nothing; study=nothing, wd=joinpath(pwd(), "runs"))
     return p
 end
 
-function calc_sparams(run_probs, models=nothing; kwargs...)
+function calc_sparams(probs, models=nothing; kwargs...)
     lminloss = 0
-    sols = solve.(run_probs, (models,))
+    sols = solve.(probs, (models,))
 
     ignore_derivatives() do
     end
 
     # return sols[1]
     coeffs = OrderedDict()
-    for (sol, prob) in zip(sols, run_probs)
+    for (sol, prob) in zip(sols, probs)
         @unpack source_instances, monitor_instances = prob
         source_port = source_instances(1).tags.port
         source_mn = first(source_instances).tags.wavelength_mode_numbers(1)[1]

@@ -66,7 +66,7 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
     end
     geometry_names = (:ϵ, :μ, :σ, :m, :invϵ, :invμ)
     for k = geometry_names
-        k, extrema(geometry[k][1]) |> println
+        @debug k extrema(geometry[k][1])
     end
 
     a = geometry.ϵ[1]
@@ -81,8 +81,8 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
 
     maxdeltas = maximum.(deltas)
 
-    v = 0.15 / dt
-    δ = -3log(1e-4) / nmin / 2 / (2v) |> F
+    v = 0.15 / dt |> F
+    δ = -2log(1e-4) / nmin / 2 / (2v) |> F
     σpml = ϵmin * v
     mpml = μmin * v
 
@@ -342,12 +342,11 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
 
     if Tss == nothing
         if isnothing(Tssmin)
-            Tssmin = 120nmax / nres / N
+            Tssmin = 40nmax / nres / N
         end
         v = reduce(vcat, wavelengths.(monitor_instances))
         v = Base.round.(v, digits=3)
         v = v |> Set |> collect |> sort |> reverse
-        @show v
         if length(v) == 1
             Tss = 1
         else

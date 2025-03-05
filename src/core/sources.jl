@@ -336,5 +336,5 @@ function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g; z)
     end
     # m = vmap(x -> C.(x), m)
 
-    global r = (; λmodes, _λmodes, box_size, box_rulers, bbox, box_deltas, I, plane_points, plane_Is, plane_deltas, labelpos)
+    r = (; λmodes, _λmodes, box_size, box_rulers, bbox, box_deltas, I, plane_points, plane_Is, plane_deltas, labelpos)
 end
