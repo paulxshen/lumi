@@ -43,8 +43,8 @@ function tensorinv(a::AbstractArray{T}, ratio) where {T}
     In = LinearAlgebra.I(N)
     # spacings = _downvec.(spacings, size(a))
     a = downsample(a, ratio) do a
-        p, q = extrema(a)
-        p == q & return In / p
+        p, q = @ignore_derivatives extrema(a)
+        p == q & return In / a[1]
 
         n = imnormal(v)
         P = n * n'

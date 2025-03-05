@@ -19,7 +19,9 @@ RUNS = joinpath("build", "precompile_execution")
 # picrun(joinpath("runs", "tiny3"))
 picrun(joinpath(RUNS, "back_float32"))# array=cu)
 # models[1]()
+# a = [1]
 
+# prob.canvas_instances[1]._frame[:ϵ]|>extrema
 # picrun(joinpath("runs", "demux"))
 # picrun(joinpath("runs", "straight"))
 

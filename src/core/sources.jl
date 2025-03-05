@@ -272,11 +272,11 @@ function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g; z)
         plane_deltas = dx
 
         global ϵmode = samplemesh(ϵ, plane_points; z) .|> F
-        if N == 3
-            display(heatmap(ϵmode))
-        else
-            display(plot(ϵmode))
-        end
+        # if N == 3
+        #     display(heatmap(ϵmode))
+        # else
+        #     display(plot(ϵmode))
+        # end
 
         λmodes = OrderedDict([λ => begin
             modes = solvemodes(ϵmode, dx, λ, maximum(mns) + 1, TEMP; mode_solutions)[mns+1]

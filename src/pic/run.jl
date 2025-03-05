@@ -151,8 +151,8 @@ function picrun(path, array=Array; kw...)
     # error("not implemented")
     t0 = time()
     println("compiling simulation code...")
+    global sols
     if study == "sparams"
-        global sols
         @unpack S, sols = calc_sparams(run_probs;
             framerate, path)
         plotsim(run_probs[1] |> cpu, sols[1] |> cpu, ; path=joinpath(path, "sim.png"))
@@ -180,6 +180,7 @@ function picrun(path, array=Array; kw...)
         println("starting optimization... first iter will be slow due to adjoint compilation.")
         img = nothing
         println("")
+        # iters = 1
         for i = 1:iters
             println("====($i)  ")
             stop = i == iters
@@ -187,6 +188,7 @@ function picrun(path, array=Array; kw...)
                 models = [model]
                 res = calc_sparams(run_probs, models;
                     save_memory, path, framerate)
+                global sols
                 # return res
                 @unpack S, sols = res
                 l = 0
@@ -264,7 +266,6 @@ function picrun(path, array=Array; kw...)
                     # Images.save(joinpath(ckptpath, "optimized_canvas_$i.png"), a)
                     # Images.save(joinpath(path, "optimized_canvas_$i.png"), a)
                 end
-                plotsols(sols, run_probs, (path, ckptpath))
 
                 sol = (;
                     sparam_family(S)...,
@@ -296,11 +297,12 @@ function picrun(path, array=Array; kw...)
             println("====\n")
         end
         println("Done in $(time() - t0) .")
-
+        plotsim(run_probs[1] |> cpu, sols[1] |> cpu, ; path=joinpath(path, "sim.png"))
     end
-    if length(sol.T) > 1
-        println("wavelengths may have been adjusted to facilitate simulation.")
-    end
+    # if length(sol.T) > 1
+    #     println("wavelengths may have been adjusted to facilitate simulation.")
+    # end
+    sol = sols[1]
     println("T-params: ")
     println(JSON.json(sol.T, 4))
     # println(sol)

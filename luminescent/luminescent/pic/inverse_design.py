@@ -126,8 +126,8 @@ def make_pic_inv_problem(path, c,  targets, iters=10,
 
     ks = set(materials[fill_material].keys()).intersection(
         set(materials[void_material].keys()))
-    swaps = {k: (materials[fill_material][k],
-                 materials[void_material][k]) for k in ks}
+    swaps = {k: (materials[void_material][k],
+                 materials[fill_material][k]) for k in ks}
     prob["canvases"] = [
         {
             "swaps": swaps,

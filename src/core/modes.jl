@@ -99,7 +99,8 @@ function localframe(u, monitor; approx_2D_mode=nothing)
         u = (Ex=u.E[1], Hy=Hz)
     end
     vmap(u) do v
-        getindexf.((v,), Tuple.(monitor.plane_Is))
+        Is = @ignore_derivatives Tuple.(monitor.plane_Is)
+        getindexf.((v,), Is)
     end
 end
 

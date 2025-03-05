@@ -66,7 +66,7 @@ function apply_canvas!(c, geometry, models)
         v0, v = swaps[k]
         b = Buffer(_frame[k])
         b[:] = _frame[k]
-        b = place!(b, m * v + (1 - m) * v0, fill(ratio + 1, N))
+        b = place!(b, m * v + (1 - m) * v0, fill(ratio + 1, N); additive=false)
         _a = copy(b)
 
         if :ϵ == k
@@ -87,7 +87,7 @@ function apply_canvas!(c, geometry, models)
             geometry[k] = map(geometry[k], a) do g, a
                 b = Buffer(g)
                 b[:] = g
-                b = place!(b, a, start)
+                b = place!(b, a, start; additive=false)
                 copy(b)
             end
         end

@@ -15,7 +15,7 @@ for N, dtype, gpu in itertools.product([2, 3], ["float32"], [None, "CUDA"]):
     path = os.path.join(dir, f"tiny_{N}_{dtype}_{gpu}")
     approx_2D_mode = "TE" if N == 2 else None
     lumi.make_pic_sim_problem(path, c, wavelengths=wavelengths, keys=[
-        "2,1"], nres=6, approx_2D_mode=approx_2D_mode, gpu=gpu, dtype=dtype)
+        "2,1"], nres=4, approx_2D_mode=approx_2D_mode, gpu=gpu, dtype=dtype)
 
 
 # raise NotImplementedError("This is a stub")

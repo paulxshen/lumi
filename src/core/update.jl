@@ -1,7 +1,7 @@
-"""
-
-Updates fields. 
-"""
+function Base.setindex!(A::Vector{Int64}, x::Matrix{Float32}, i::Int64)
+    global _p = A, x, i
+    error("setindex! not implemented for Vector{Int64} and Matrix{Float32}")
+end
 function update(u, p, t, dt, diffdeltas, diffpadvals, source_instances)
     # unpack fields and geometry
     @unpack E, H = u
@@ -20,8 +20,8 @@ function update(u, p, t, dt, diffdeltas, diffpadvals, source_instances)
     # γm = [p("γ$k") for k = poles]
     # βm = [p("β$k") for k = poles]
 
-    @nograd t, dt, diffdeltas, diffpadvals, source_instances, σ, m, invμ
-    N = ndims(E(1))
+    # @nograd t, dt, diffdeltas, diffpadvals, source_instances, σ, m, invμ
+    @nograd t, dt, diffdeltas, diffpadvals, source_instances, invμ
 
     # staggered grid housekeeping
     ∇ = Del(diffdeltas, diffpadvals)
@@ -50,7 +50,10 @@ function update(u, p, t, dt, diffdeltas, diffpadvals, source_instances)
 
     # first update E
     # tensor subpixel smoothing
-    dEdt = invϵ * (∇ × H - Js - E ⊙ σ)
+    # dEdt = invϵ * (∇ × H - Js - E ⊙ σ)
+    dEdt = invϵ * (∇ × H - Js - map(values(E)) do a
+        a .* σ[1]
+    end)
     E += dEdt * dt
 
     # then update H
@@ -61,5 +64,6 @@ function update(u, p, t, dt, diffdeltas, diffpadvals, source_instances)
     # (; E, H, (Jkeys .=> Jm)..., (Pkeys .=> Pm)...)
     # namedtuple([:E => E, :H => H, (Jkeys .=> Jm)..., (Pkeys .=> Pm)...])
     # namedtuple(vcat([:E => E, :H => H], Jkeys .=> Jm, Pkeys .=> Pm))
-    namedtuple(vcat([:E => E, :H => H]))
+    # namedtuple(vcat([:E => E, :H => H]))
+    (; E, H)
 end
