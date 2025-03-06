@@ -38,7 +38,7 @@ end
 _size(s::Real, n) = int(s * n)
 _size(s, _) = int(sum(s))
 
-function tensorinv(a::AbstractArray{T}, ratio) where {T}
+function tensorinv(a::AbstractArray{T}, ratio=4) where {T}
     N = ndims(a)
     In = LinearAlgebra.I(N)
     # spacings = _downvec.(spacings, size(a))
@@ -71,11 +71,12 @@ function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=
         stop = getindex.(rulers, I .+ 1)
         Δ = stop - start
 
-        start -= Δ / 4
-        stop += Δ / 4
-        start .= max.(start, first.(rulers) + F(0.001))
-        stop .= min.(stop, last.(rulers) - F(0.001))
-        center = (start + stop) / 2
+        center = start + Δ / 4
+        start = center - F(0.75) * Δ
+        stop = center + F(0.75) * Δ
+
+        start .= max.(start, first.(rulers))
+        stop .= min.(stop, last.(rulers))
 
         if !isnothing(z)
             push!(center, z)
@@ -84,24 +85,30 @@ function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=
             push!(Δ, 0)
         end
 
-        # box = Box(Point(start...), Point(stop...))
-        point = Point(center...)
+        points = map((center, start, stop)) do v
+            Point(v...)
+        end
         hits = fill(false, length(meshvals))
         for (i, (m, v)) = enumerate(meshvals)
-            # if !isnothing(m) && intersects(box, m)
-            if !isnothing(m) && xor(sideof(Point(start...), m) != OUT, sideof(Point(stop...), m) != OUT)
+            if !isnothing(m)
+                ins = sideof.(points, (m,)) .== IN
+            else
+                ins = nothing
+            end
+
+            if !isnothing(ins) && maximum(ins) != minimum(ins)
                 hits[i] = true
-            elseif (!any(hits) && isnothing(m)) || (!isnothing(m) && sideof(point, m) != OUT)
+            elseif (!any(hits) && isnothing(m)) || (!isnothing(m) && ins[1])
                 tensor && inv && return (In) / v
                 return v
             end
         end
 
-        n = 4
+        n = 8
         δ = Δ / n
         a = map(Base.product(range.(start + δ / 2, stop - δ / 2, n)...)) do p
             for (m, v) = meshvals[hits]
-                sideof(Point(p...), m) != OUT && return v
+                sideof(Point(p...), m) == IN && return v
             end
             default
         end

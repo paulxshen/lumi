@@ -11,7 +11,8 @@ dir = os.path.join("build", "precompile_execution")
 c = gf.components.straight(length=1, width=0.5,)
 wavelengths = 1.5
 
-for N, dtype, gpu in itertools.product([2, 3], ["float32"], [None, "CUDA"]):
+# for N, dtype, gpu in itertools.product([2, 3], ["float32"], [None, "CUDA"]):
+for N, dtype, gpu in itertools.product([2, 3], ["float32"], [None]):
     path = os.path.join(dir, f"tiny_{N}_{dtype}_{gpu}")
     approx_2D_mode = "TE" if N == 2 else None
     lumi.make_pic_sim_problem(path, c, wavelengths=wavelengths, keys=[

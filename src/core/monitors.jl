@@ -41,8 +41,6 @@ wavelengths(m::Monitor) = keys(m.λmodes)
 
 abstract type AbstractMonitorInstance end
 mutable struct MonitorInstance <: AbstractMonitorInstance
-
-    center
     frame
     I
     box_deltas
@@ -59,11 +57,12 @@ wavelengths(m::MonitorInstance) = keys(m.λmodes)
 Base.length(m::MonitorInstance) = 1
 
 function MonitorInstance(m::Monitor, g, ϵ, TEMP; z=nothing, mode_solutions=nothing)
-    @unpack λmodes, _λmodes, box_rulers, bbox, box_deltas, I, plane_deltas, plane_Is, labelpos = _get_λmodes(m, ϵ, TEMP, mode_solutions, g; z)
+    @unpack λmodes, _λmodes, box_rulers, bbox, box_deltas, I, plane_deltas, plane_Is, = _get_λmodes(m, ϵ, TEMP, mode_solutions, g; z)
     @unpack F = g
-    @unpack center, frame = m
-    center, frame = F.((center, frame))
-    MonitorInstance(center, frame, I, box_deltas, plane_Is, plane_deltas, λmodes, _λmodes, m.tags)
+    @unpack tags, frame, center = m
+    frame, center = F.((frame, center))
+    tags[:center] = center
+    MonitorInstance(frame, I, box_deltas, plane_Is, plane_deltas, λmodes, _λmodes, tags)
 end
 
 function MonitorInstance(m::PlaneMonitor, g)

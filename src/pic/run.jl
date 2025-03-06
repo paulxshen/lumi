@@ -157,6 +157,8 @@ function picrun(path, array=Array; kw...)
         plotsim(probs[1] |> cpu, sols[1] |> cpu, ; path=joinpath(path, "sim.png"))
         sol = (; sparam_family(S)...,
             path, study)
+        println("T-params: ")
+        println(json(sol.T, 4))
         open(SOL, "w") do f
             write(f, json(cpu(sol)))
         end

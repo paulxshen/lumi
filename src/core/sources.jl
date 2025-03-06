@@ -110,9 +110,6 @@ Args
 
 struct SourceInstance
     sigmodes
-    # o
-    center
-    # dimsperm
     tags
 end
 @functor SourceInstance (sigmodes,)
@@ -125,12 +122,12 @@ function SourceInstance(s::PlaneWave, g)
 end
 
 function SourceInstance(s::Source, g, ϵ, TEMP; z=nothing, mode_solutions=nothing)
-    @unpack tags, frame = s
+    @unpack tags, center, frame = s
     @unpack F, sizes = g
     C = complex(F)
     N = ndims(s)
 
-    @unpack λmodes, _λmodes, box_size, bbox, box_deltas, I, plane_points, plane_Is, labelpos =
+    @unpack λmodes, _λmodes, box_size, bbox, box_deltas, I, plane_points, plane_Is, =
         _get_λmodes(s, ϵ, TEMP, mode_solutions, g; z)
 
     λs = @ignore_derivatives Array(keys(λmodes))
@@ -191,9 +188,8 @@ function SourceInstance(s::Source, g, ϵ, TEMP; z=nothing, mode_solutions=nothin
                 end for k = sort(keys(mode))])
             (f, mode)
         end for (sig, mode) = sigmodes]
-    # @show center, g.lb, labelpos
-
-    SourceInstance(sigmodes, labelpos, tags)
+    tags[:center] = center
+    SourceInstance(sigmodes, tags)
 end
 
 # Complex
@@ -254,7 +250,7 @@ function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g; z)
         a = start - l
         range.(a, a + box_size - 1, box_size)
     end for k = ks])
-    labelpos = round(Int, indexof.(rulers, center))
+    pos = round(Int, indexof.(rulers, center))
 
     # 
     if !isnothing(λmodenums)
@@ -336,5 +332,5 @@ function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g; z)
     end
     # m = vmap(x -> C.(x), m)
 
-    r = (; λmodes, _λmodes, box_size, box_rulers, bbox, box_deltas, I, plane_points, plane_Is, plane_deltas, labelpos)
+    r = (; λmodes, _λmodes, box_size, box_rulers, bbox, box_deltas, I, plane_points, plane_Is, plane_deltas,)
 end

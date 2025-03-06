@@ -2,6 +2,7 @@
 /picruns
 /genruns
 venv/
+/test
 # temp*
 phantom*
 phantom.*

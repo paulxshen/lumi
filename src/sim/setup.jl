@@ -12,7 +12,7 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
     Ttrans=nothing, Tss=nothing, Tssmin=nothing,
     ϵ=1, μ=1, σ=0, m=0, γ=0, β=0,
     F=Float32,
-    Courant=0.9,
+    Courant=0.7,
     array=Array,
     pmlfracs=1,
     TEMP="",
@@ -23,6 +23,7 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
     deltas = diff.(rulers)
     N = length(rulers)
     sz = Tuple(length.(rulers) - 1)
+    @show sz, prod(sz)
 
     if !isnothing(approx_2D_mode)
         approx_2D_mode = Symbol(approx_2D_mode)
@@ -43,12 +44,12 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
                 end
             end
         else
-            geometry[k] = tensorinv(v, rulers; z)
+            @time geometry[k] = tensorinv(v, rulers; z)
             if k == :ϵ
                 haspec = any(>=(PECVAL), last.(ϵ[1:end-1]))
                 if !haspec
                     println("no PEC regions found in geometry")
-                    geometry[:invϵ] = tensorinv(v, rulers; tensor=true, inv=true, z)
+                    @time geometry[:invϵ] = tensorinv(v, rulers; tensor=true, inv=true, z)
                     # geometry[:invϵ] = [map(geometry[:ϵ][1]) do a
                     #     1 ./ a
                     # end]
@@ -82,7 +83,7 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
     maxdeltas = maximum.(deltas)
 
     v = 0.15 / dt |> F
-    δ = -2log(1e-4) / nmin / 2 / (2v) |> F
+    δ = -2log(1e-6) / nmin / 2 / (2v) |> F
     σpml = ϵmin * v
     mpml = μmin * v
 
@@ -342,7 +343,7 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
 
     if Tss == nothing
         if isnothing(Tssmin)
-            Tssmin = 40nmax / nres / N
+            Tssmin = max(10, 50nmax / nres / N)
         end
         v = reduce(vcat, wavelengths.(monitor_instances))
         v = Base.round.(v, digits=3)
