@@ -64,53 +64,42 @@ function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=
     N = length(rulers)
     In = LinearAlgebra.I(N)
     ns = length.(rulers)
-    default = meshvals[end][2]
-    F = eltype(rulers[1])
-    a = map(Base.product(Base.OneTo.(ns - 1)...)) do I
+    sz = Tuple(ns - 1)
+
+    rulers1 = isnothing(z) ? rulers : vcat(rulers, [z])
+    a = map(Base.product(rulers1...)) do p
+        for (i, (m, v)) = enumerate(meshvals)
+            if isnothing(m) || sideof(Point(p...), m) == IN
+                return i
+            end
+        end
+    end
+
+    a = map(CartesianIndices(sz)) do I
+        ms = map(Base.product(zip(I, I + 1)...)) do I
+            a[I...]
+        end
+
+        i = maximum(ms)
+        if i == minimum(ms)
+            v = mvs[i][2]
+            tensor && inv && return (In) / v
+            return v
+        end
+
         start = getindex.(rulers, I)
-        stop = getindex.(rulers, I .+ 1)
+        stop = getindex.(rulers, I + 1)
         Δ = stop - start
 
-        center = start + Δ / 4
-        start = center - F(0.75) * Δ
-        stop = center + F(0.75) * Δ
-
-        start .= max.(start, first.(rulers))
-        stop .= min.(stop, last.(rulers))
-
-        if !isnothing(z)
-            push!(center, z)
-            push!(start, z)
-            push!(stop, z)
-            push!(Δ, 0)
-        end
-
-        points = map((center, start, stop)) do v
-            Point(v...)
-        end
-        hits = fill(false, length(meshvals))
-        for (i, (m, v)) = enumerate(meshvals)
-            if !isnothing(m)
-                ins = sideof.(points, (m,)) .== IN
-            else
-                ins = nothing
-            end
-
-            if !isnothing(ins) && maximum(ins) != minimum(ins)
-                hits[i] = true
-            elseif (!any(hits) && isnothing(m)) || (!isnothing(m) && ins[1])
-                tensor && inv && return (In) / v
-                return v
-            end
-        end
-
-        n = 8
+        n = 6
         δ = Δ / n
+        hits = sort(unique(ms))
         a = map(Base.product(range.(start + δ / 2, stop - δ / 2, n)...)) do p
             for (m, v) = meshvals[hits]
-                sideof(Point(p...), m) == IN && return v
+                if isnothing(m) || sideof(Point(p...), m) == IN
+                    return v
+                end
             end
-            default
         end
 
         if tensor && inv

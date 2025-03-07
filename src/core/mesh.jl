@@ -1,5 +1,7 @@
-function partition(d, nres, v)
-    n = ceil(Int, d * nres * sqrt(v))
+function partition(d, nres, v, vmax)
+    nres *= (v / vmax)^0.5
+    nres = max(4, nres)
+    n = ceil(Int, d * nres * v)
     d / n, n
 end
 function transit(a::T, b) where {T}
@@ -12,7 +14,8 @@ function makemesh(mvs, bbox, nres)
     # global _sfda = mvs, bbox, nres
     N = size(bbox, 1)
     rulers = [[(a, last(mvs)[2]), (b, nothing)] for (a, b) = eachrow(bbox)]
-    for (m, v) = reverse(mvs)[2:end]
+    vmax = maximum(last.(mvs))
+    for (m, v) = reverse(mvs[1:end-1])
         x = boundingbox(m)
         @debug x
         a = ustrip.(getfield(coords(x.min), :coords))
@@ -49,42 +52,42 @@ function makemesh(mvs, bbox, nres)
             l = i == 1 || v >= v0
             r = i == length(ruler) - 1 || v >= v1
 
-            Δ, n = partition(d, nres, v)
+            Δ, n = partition(d, nres, v, vmax)
             if l && r
                 fill(Δ, n)
             elseif !l && !r
-                Δ0, n0 = partition(d0, nres, v0)
-                Δ1, n1 = partition(d1, nres, v1)
+                Δ0, n0 = partition(d0, nres, v0, vmax)
+                Δ1, n1 = partition(d1, nres, v1, vmax)
                 L = transit(Δ0, Δ)
                 R = transit(Δ1, Δ)
                 s = d - (sum(L) + sum(R))
                 if s > 0
-                    Δs, ns = partition(s, nres, v)
+                    Δs, ns = partition(s, nres, v, vmax)
                     vcat(L, fill(Δs, ns), reverse(R))
                 else
                     Δ, n = partition(d, nres, max(v0, v1))
                     fill(Δ, n)
                 end
             elseif l
-                Δ1, n1 = partition(d1, nres, v1)
+                Δ1, n1 = partition(d1, nres, v1, vmax)
                 R = transit(Δ1, Δ)
                 s = d - sum(R)
                 if s > 0
-                    Δs, ns = partition(s, nres, v)
+                    Δs, ns = partition(s, nres, v, vmax)
                     vcat(fill(Δs, ns), reverse(R))
                 else
-                    Δ, n = partition(d, nres, v1)
+                    Δ, n = partition(d, nres, v1, vmax)
                     fill(Δ, n)
                 end
             else
-                Δ0, n0 = partition(d0, nres, v0)
+                Δ0, n0 = partition(d0, nres, v0, vmax)
                 L = transit(Δ0, Δ)
                 s = d - sum(L)
                 if s > 0
-                    Δs, ns = partition(s, nres, v)
+                    Δs, ns = partition(s, nres, v, vmax)
                     vcat(L, fill(Δs, ns))
                 else
-                    Δ, n = partition(d, nres, v0)
+                    Δ, n = partition(d, nres, v0, vmax)
                     fill(Δ, n)
                 end
             end

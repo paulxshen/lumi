@@ -12,14 +12,14 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
     Ttrans=nothing, Tss=nothing, Tssmin=nothing,
     ϵ=1, μ=1, σ=0, m=0, γ=0, β=0,
     F=Float32,
-    Courant=0.7,
+    Courant=0.9,
     array=Array,
     pmlfracs=1,
     TEMP="",
 )
     Courant = F(Courant)
     bbox, nres, = F.((bbox, nres,))
-    rulers = makemesh(ϵ, bbox, nres) |> F
+    rulers = makemesh([(m, sqrt(v)) for (m, v) = ϵ], bbox, nres) |> F
     deltas = diff.(rulers)
     N = length(rulers)
     sz = Tuple(length.(rulers) - 1)
@@ -31,7 +31,7 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
     pmlfracs = _pmlfracs(pmlfracs, N)
 
     global geometry = OrderedDict()
-    println("preprocessing geometry...")
+    println("meshing geometry - can take few minutes...")
     for (k, v) = pairs((; ϵ, μ, σ, m, γ, β))
         if isa(v, Number)
             v = F(v)
@@ -44,24 +44,26 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
                 end
             end
         else
-            @time geometry[k] = tensorinv(v, rulers; z)
             if k == :ϵ
                 haspec = any(>=(PECVAL), last.(ϵ[1:end-1]))
                 if !haspec
-                    println("no PEC regions found in geometry")
+                    # println("no PEC regions found in geometry")
                     @time geometry[:invϵ] = tensorinv(v, rulers; tensor=true, inv=true, z)
                     # geometry[:invϵ] = [map(geometry[:ϵ][1]) do a
                     #     1 ./ a
                     # end]
+                    geometry[:ϵ] = [1 ./ mean(diag(geometry[:invϵ]))]
                 else
-                    geometry[:invϵ] = [map(geometry[:ϵ][1]) do a
+                    geometry[:ϵ] = tensorinv(v, rulers; z)
+                    geometry[:invϵ] = [1 ./ geometry[:ϵ][1]]
+                end
+            else
+                geometry[k] = tensorinv(v, rulers; z)
+                if k == :μ
+                    geometry[:invμ] = [map(geometry[:μ][1]) do a
                         1 ./ a
                     end]
                 end
-            elseif k == :μ
-                geometry[:invμ] = [map(geometry[:μ][1]) do a
-                    1 ./ a
-                end]
             end
         end
     end
@@ -275,8 +277,8 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
             # xyz = f[2]
             # terminations = zip(is_field_on_lb[f], is_field_on_ub[f])
             # g = Symbol("$(k)$xyz$xyz")
-            l = -edges[f][:, 1] / 2 |> F
-            f => [l l]
+            l = -edges[f][:, 1] / 2 + 0.25
+            f => [l l] |> F
         end for f = keys(edges)])
 
     diffpadvals = vmap(a -> reverse(a, dims=2), boundvals)

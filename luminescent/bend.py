@@ -4,14 +4,21 @@ import numpy as np
 import os
 
 radius = 5
-c = gf.components.bend_circular(radius=radius, allow_min_radius_violation=True)
-# c.plot()
-
-path = os.path.join("test", f"bend_R{radius}")
-wavelengths = 1.55
+wavelengths = np.linspace(1.45, 1.65, 7)
 keys = ["2,1"]  # same as keys=["o2@0,o1@0"]
-nres = 8
+nres = 10
 gpu = None
+materials = lumi.MATERIALS
+layer_stack = lumi.SOI
 
+c = gf.components.bend_circular(radius)
+path = os.path.join("test", f"bend_R{radius}")
+lumi.make_pic_sim_problem(path, c, wavelengths=wavelengths, nres=nres, keys=keys, gpu=gpu,
+                          materials=materials, layer_stack=layer_stack)
+
+c = gf.components.straight(1)
+path = os.path.join("test", f"straight")
+wavelengths = np.linspace(1.4, 1.6, 5)
+nres = 8
 lumi.make_pic_sim_problem(
     path, c, wavelengths=wavelengths, nres=nres, keys=keys, gpu=gpu)

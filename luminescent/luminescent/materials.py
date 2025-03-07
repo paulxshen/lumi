@@ -22,8 +22,7 @@ def matname(k):
 
 
 MATERIALS = {
-    "cSi": {
-        'epsilon': 3.48**2},
+    "cSi": {'epsilon': 3.48**2},
     "SiO2": {'epsilon': 1.44**2},
     "SiN": {'epsilon': 2.0**2},
     "Ge": {'epsilon': 4.0**2},
