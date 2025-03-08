@@ -85,7 +85,7 @@ function cluster(v)
     groups = []
     group = []
     for (i, x) = enumerate(v)
-        if isempty(group) || x / v[group[1]] < 1.1
+        if isempty(group) || x / v[group[1]] < 1.2
             push!(group, i)
         else
             push!(groups, group)

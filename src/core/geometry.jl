@@ -65,24 +65,29 @@ function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=
     In = LinearAlgebra.I(N)
     ns = length.(rulers)
     sz = Tuple(ns - 1)
-
+    δ = minimum.(diff.(rulers)) / 10
     rulers1 = isnothing(z) ? rulers : vcat(rulers, [z])
-    a = map(Base.product(rulers1...)) do p
+    c = map(Base.product(rulers1...)) do p
+        ps = map((-δ, +δ)) do d
+            Point((p + d)...)
+        end
         for (i, (m, v)) = enumerate(meshvals)
-            if isnothing(m) || sideof(Point(p...), m) == IN
-                return i
-            end
+            isnothing(m) && return i
+            v = sideof(ps, m) .== IN
+            all(v) && return i
+            v[1] != v[2] && return 0
         end
     end
 
     a = map(CartesianIndices(sz)) do I
+        I = Tuple(I)
         ms = map(Base.product(zip(I, I + 1)...)) do I
-            a[I...]
+            c[I...]
         end
 
-        i = maximum(ms)
-        if i == minimum(ms)
-            v = mvs[i][2]
+        i = minimum(ms)
+        if i > 0 && i == maximum(ms)
+            v = meshvals[i][2]
             tensor && inv && return (In) / v
             return v
         end
@@ -91,12 +96,21 @@ function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=
         stop = getindex.(rulers, I + 1)
         Δ = stop - start
 
-        n = 6
+        if inv && tensor
+            start = start - Δ / 3
+            stop = stop + Δ / 3
+            start .= max.(start, first.(rulers))
+            stop .= min.(stop, last.(rulers))
+            Δ = stop - start
+        end
+
+        n = 8
         δ = Δ / n
-        hits = sort(unique(ms))
+        # hits = sort(unique(ms))
         a = map(Base.product(range.(start + δ / 2, stop - δ / 2, n)...)) do p
-            for (m, v) = meshvals[hits]
-                if isnothing(m) || sideof(Point(p...), m) == IN
+            p = isnothing(z) ? Point(p...) : Point(p..., z)
+            for (m, v) = meshvals
+                if isnothing(m) || sideof(p, m) == IN
                     return v
                 end
             end

@@ -12,18 +12,21 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
     Ttrans=nothing, Tss=nothing, Tssmin=nothing,
     ϵ=1, μ=1, σ=0, m=0, γ=0, β=0,
     F=Float32,
-    Courant=0.9,
+    relcourant=0.9,
     array=Array,
     pmlfracs=1,
     TEMP="",
 )
-    Courant = F(Courant)
+    println("setting up simulation...")
+
+    relcourant = F(relcourant)
     bbox, nres, = F.((bbox, nres,))
     rulers = makemesh([(m, sqrt(v)) for (m, v) = ϵ], bbox, nres) |> F
+
     deltas = diff.(rulers)
+    @debug extrema.(deltas)
     N = length(rulers)
     sz = Tuple(length.(rulers) - 1)
-    @show sz, prod(sz)
 
     if !isnothing(approx_2D_mode)
         approx_2D_mode = Symbol(approx_2D_mode)
@@ -79,7 +82,7 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
     nmax = sqrt(ϵmax * μmax)
     nmin = sqrt(ϵmin * μmin)
 
-    dt = nmin / √(sum(v -> 1 / minimum(v)^2, deltas)) * Courant
+    dt = nmin / √(sum(v -> 1 / minimum(v)^2, deltas)) * relcourant
     dt = 1 / ceil(1 / dt)
 
     maxdeltas = maximum.(deltas)
@@ -208,8 +211,10 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
         for j = 1:2
             b = db[i, j]
             if isa(b, PML)
-                npml = round(b.d / maxdeltas[i])
-                v = maxdeltas[i] * (1:npml)
+                d = j == 1 ? deltas[i][1] : deltas[i][end]
+                npml = round(b.d / d)
+                npml = max(npml, 1)
+                v = d * (1:npml)
                 if j == 1
                     # pushfirst!(deltas[i], fill(maxdeltas[i], npml)...)
                     prepend!(rulers[i], rulers[i][1] - reverse(v))
@@ -277,14 +282,16 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
             # xyz = f[2]
             # terminations = zip(is_field_on_lb[f], is_field_on_ub[f])
             # g = Symbol("$(k)$xyz$xyz")
-            l = -edges[f][:, 1] / 2 + 0.25
-            f => [l l] |> F
-        end for f = keys(edges)])
+            if f != :default
+                l = -edges[f][:, 1] / 2 + 0.25
+                v = [l l] |> F
+            end
+            f => v
+        end for (f, v) = pairs(edges)])
 
     diffpadvals = vmap(a -> reverse(a, dims=2), boundvals)
 
     rulers = OrderedDict([
-        :default => rulers,
         begin
             d = map(rulers) do v
                 vcat([2v[1] - v[2]], v, [2v[end] - v[end-1]])
@@ -361,21 +368,25 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
         @show Tssmin
         Tss *= Base.ceil(Int, Tssmin / Tss)
     end
-
-    @show Ttrans, Tss
     Ttrans, Tss = convert.(F, (Ttrans, Tss))
+
+    T = Ttrans + Tss
+    nt = round(Int, T / dt)
+    nv = prod(sizes.default)
+    load = nt * nv
+
     global prob = (;
                       grid,
                       source_instances, monitor_instances, canvas_instances,
-                      field_names, approx_2D_mode, Courant,
+                      field_names, approx_2D_mode,
                       Ttrans, Tss,
                       geometry, nmax, nmin,
                       u0, dt, array,) |> pairs |> OrderedDict
 
     if array == Array
-        println("using CPU backend.")
+        backend = :CPU
     else
-        println("using GPU backend.")
+        backend = :GPU
         for k in (:u0, :geometry, :source_instances, :monitor_instances)
             prob[k] = gpu(array, prob[k],)
         end
@@ -386,7 +397,19 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
         # error("stop here")
         # p = fmap(array, p, AbstractArray{<:Number})
     end
-
+    println("\nsimulation setup complete")
+    # println("Courant number: $Courant")
+    println("backend: $backend")
+    println("float: $F")
+    println("original size: $sz")
+    println("padded size: $(sizes.default)")
+    println("cell count: $(prod(sizes.default))")
+    println("transient time: $Ttrans")
+    println("steady state time: $Tss")
+    println("total time: $T")
+    println("time steps: $(nt)")
+    println("computation load: $(load) cell-steps")
+    println("")
     prob
 end
 update = update

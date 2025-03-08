@@ -1,20 +1,37 @@
-function partition(d, nres, v, vmax)
-    nres *= (v / vmax)^0.5
-    nres = max(4, nres)
-    n = ceil(Int, d * nres * v)
-    d / n, n
-end
 function transit(a::T, b) where {T}
-    n = ceil(Int, log(1.5, b / a))
+    n = ceil(Int, log(1.4, b / a))
     r = (b / a)^(1 / n) |> T
-    a * r .^ (0:n)
+    # a * r .^ (0:n)
+    a * r .^ [0, 0, (1:n)...]
+end
+function share(v, x)
+    if v[2] > v[1]
+        a = v[2:end]
+        vcat([v[1]], a + x * a / sum(a))
+    else
+        a = v[1:end-1]
+        vcat(a + x * a / sum(a), [v[end]])
+    end
 end
 
+function partition(d, n, nres, nmax, withrem=false)
+    nres *= (n / nmax)
+    nres = max(2.1, nres)
+    c = d * nres * n
+    if withrem
+        c0 = c
+        c = floor(Int, c)
+        r = c0 - c
+        d / c0, c, r * d / c0
+    else
+        c = ceil(Int, c)
+        d / c, c
+    end
+end
 function makemesh(mvs, bbox, nres)
-    # global _sfda = mvs, bbox, nres
-    N = size(bbox, 1)
+    nmax = maximum(last.(mvs))
+
     rulers = [[(a, last(mvs)[2]), (b, nothing)] for (a, b) = eachrow(bbox)]
-    vmax = maximum(last.(mvs))
     for (m, v) = reverse(mvs[1:end-1])
         x = boundingbox(m)
         @debug x
@@ -52,42 +69,46 @@ function makemesh(mvs, bbox, nres)
             l = i == 1 || v >= v0
             r = i == length(ruler) - 1 || v >= v1
 
-            Δ, n = partition(d, nres, v, vmax)
+            Δ, n = partition(d, v, nres, nmax,)
             if l && r
                 fill(Δ, n)
             elseif !l && !r
-                Δ0, n0 = partition(d0, nres, v0, vmax)
-                Δ1, n1 = partition(d1, nres, v1, vmax)
+                Δ0, c0 = partition(d0, v0, nres, nmax)
+                Δ1, c1 = partition(d1, v1, nres, nmax)
                 L = transit(Δ0, Δ)
                 R = transit(Δ1, Δ)
                 s = d - (sum(L) + sum(R))
                 if s > 0
-                    Δs, ns = partition(s, nres, v, vmax)
-                    vcat(L, fill(Δs, ns), reverse(R))
+                    Δs, ns, rm = partition(s, v, nres, nmax, true)
+                    vcat(share(L, rm / 2), fill(Δs, ns), share(reverse(R), rm / 2))
                 else
-                    Δ, n = partition(d, nres, max(v0, v1))
+                    Δ, n = partition(d, max(v0, v1), nres, nmax)
                     fill(Δ, n)
                 end
             elseif l
-                Δ1, n1 = partition(d1, nres, v1, vmax)
+                Δ1, c1 = partition(d1, v1, nres, nmax)
                 R = transit(Δ1, Δ)
-                s = d - sum(R)
-                if s > 0
-                    Δs, ns = partition(s, nres, v, vmax)
-                    vcat(fill(Δs, ns), reverse(R))
+                i = searchsortedfirst(cumsum(R), d) - 1
+                if i >= 3
+                    R = R[1:i]
+                    s = d - sum(R)
+                    Δs, ns, rm = partition(s, v, nres, nmax, true)
+                    vcat(fill(Δs, ns), share(reverse(R), rm))
                 else
-                    Δ, n = partition(d, nres, v1, vmax)
+                    Δ, n = partition(d, v1, nres, nmax)
                     fill(Δ, n)
                 end
             else
-                Δ0, n0 = partition(d0, nres, v0, vmax)
+                Δ0, c0 = partition(d0, v0, nres, nmax)
                 L = transit(Δ0, Δ)
-                s = d - sum(L)
-                if s > 0
-                    Δs, ns = partition(s, nres, v, vmax)
-                    vcat(L, fill(Δs, ns))
+                i = searchsortedfirst(cumsum(L), d) - 1
+                if i >= 3
+                    L = L[1:i]
+                    s = d - sum(L)
+                    Δs, ns, rm = partition(s, v, nres, nmax, true)
+                    vcat(share(L, rm), fill(Δs, ns))
                 else
-                    Δ, n = partition(d, nres, v0, vmax)
+                    Δ, n = partition(d, v0, nres, nmax)
                     fill(Δ, n)
                 end
             end

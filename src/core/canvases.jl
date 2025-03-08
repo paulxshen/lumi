@@ -36,7 +36,7 @@ function CanvasInstance(canvas, grid, geometry; z=nothing)
     N = ndims(canvas)
     rulers = rulers.default
     deltas = deltas.default
-
+    global _a = rulers, bbox
     start = int.(indexof.(rulers[1:N], bbox[:, 1]))
     stop = int.(indexof.(rulers[1:N], bbox[:, 2]))
     sz = stop - start

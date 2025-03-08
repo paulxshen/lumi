@@ -15,7 +15,6 @@
 function picrun(path, array=Array; kw...)
     Random.seed!(1)
     ENV["autodiff"] = "0"
-    println("setting up simulation...")
     PROB = joinpath(path, "problem.json")
     SOL = joinpath(path, "solution.json")
     TEMP = joinpath(path, "temp")
@@ -42,10 +41,8 @@ function picrun(path, array=Array; kw...)
         F = Float16
         println("Float16 selected. make sure your cpu or GPU supports it. otherwise will be emulated and very slow.")
     end
-    println("using $F")
 
     bbox = stack(bbox)
-    @show N
     @show λ = F(center_wavelength)
 
     layer_stack = sort(collect(pairs(layer_stack)), by=kv -> kv[2].mesh_order) |> OrderedDict

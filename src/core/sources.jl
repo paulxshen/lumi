@@ -138,6 +138,8 @@ function SourceInstance(s::Source, g, ϵ, TEMP; z=nothing, mode_solutions=nothin
     else
         iss = cluster(λs)
     end
+    @debug iss
+
     sigmodes = map(iss) do is
         f = t -> sum(getindex.((Array(λs),), Array(is))) do λ
             cispi(2t / λ) |> C

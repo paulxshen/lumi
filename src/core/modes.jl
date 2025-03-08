@@ -171,7 +171,7 @@ function solvemodes(ϵ, dl, λ, neigs, path; mode_solutions=nothing)
     name = round(1000000Float64(λ))
 
     # if !isfile(joinpath(path, "$(name)_mode_$(neigs-1).npz"))
-    println("run empy")
+    println("solving modal profile...")
     is2d = false
     if ndims(ϵ) == 1
         is2d = true
