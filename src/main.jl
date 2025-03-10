@@ -37,8 +37,6 @@ include("del.jl")
 include("sparams.jl")
 include("plots.jl")
 
-BREAK = "----------------------------------------"
-DBREAK = "========================================"
 
 function julia_main()::Cint
     if !isempty(ARGS)
