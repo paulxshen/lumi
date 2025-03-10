@@ -182,7 +182,7 @@ function picrun(path, array=Array; kw...)
         println("")
         # iters = 1
         for i = 1:iters
-            println("[$i] ====  ")
+            println("[$i]  ")
             stop = i == iters
             function f(model)
                 models = [model]
@@ -290,7 +290,8 @@ function picrun(path, array=Array; kw...)
             Jello.update_loss!(opt, l)
             Flux.update!(opt_state, model, dldm)# |> gpu)
             GC.gc(true)
-            println("====\n")
+            println(BREAK)
+            println()
         end
         println("iteration done in $((time() - t0)|>disp) s")
         # global sols

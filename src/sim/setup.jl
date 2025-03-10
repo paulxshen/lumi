@@ -393,7 +393,7 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
         end
     end
     println()
-    println("====")
+    println(BREAK)
     println("simulation setup complete")
     println()
     # println("Courant number: $Courant")
@@ -413,7 +413,7 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
 
     println()
     println("computation load: $(load|>disp) cell-steps")
-    println("====")
+    println(DBREAK)
     println("")
     prob
 end
