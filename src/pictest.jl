@@ -21,7 +21,7 @@ RUNS = joinpath("build", "precompile_execution")
 # picrun(joinpath("runs", "demux"))
 
 for p = readdir("build/precompile_execution", join=true)
-    if !contains(string(p), "16") #&& contains(string(p), "back")
+    if contains(string(p), "16") #&& contains(string(p), "back")
         picrun(p)
     end
 end

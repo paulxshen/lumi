@@ -51,7 +51,7 @@ function makemesh(mvs, bbox, nres)
         i=1
         while i<length(v)
             d=v[i+1][1]-v[i][1]
-            if d<1f-4
+            if d<1f-3
                 if isnothing(v[i][2])
                     v[i][2]=v[i+1][2]
                     deleteat!(v,i+1)
