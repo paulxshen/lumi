@@ -13,17 +13,17 @@ from gdsfactory.generic_tech import LAYER_STACK, LAYER
 import json
 
 
-def make_pic_inv_problem(path, c,  targets, iters=10,
-                         lvoid=0, lsolid=0, symmetries=[],
-                         weights=dict(),
-                         eta=.4, init=1,   stoploss=None,
-                         canvas_layer=CANVAS_LAYER,
-                         fill_material=None, void_material=None,
-                         materials=MATERIALS,
-                         #  fill_layer=LAYER.WG,
-                         #  void_layer=None,
-                         layer_stack=SOI,
-                         restart=True, save_memory=False, **kwargs):
+def make_design_prob(path, c,  targets, iters=10,
+                     lvoid=0, lsolid=0, symmetries=[],
+                     weights=dict(),
+                     eta=.4, init=1,   stoploss=None,
+                     canvas_layer=CANVAS_LAYER,
+                     fill_material=None, void_material=None,
+                     materials=MATERIALS,
+                     #  fill_layer=LAYER.WG,
+                     #  void_layer=None,
+                     layer_stack=SOI,
+                     restart=True, save_memory=False, **kwargs):
     # c.show()
     canvas_layer = tuple(canvas_layer)
     layer_stack = deepcopy(layer_stack)
@@ -62,7 +62,6 @@ def make_pic_inv_problem(path, c,  targets, iters=10,
                 #     # if _k not in targets["tparams"][center_wavelength]:
                 #     #     d[_k] = 0
                 # targets["tparams"][center_wavelength].update(d)
-        print(targets)
 
         targets1 = {}
         keys = SortedSet()
@@ -80,18 +79,17 @@ def make_pic_inv_problem(path, c,  targets, iters=10,
                 wavelengths.add(center_wavelength)
         targets = targets1
         keys = list(keys)
-        print(keys)
         wavelengths = list(wavelengths)
 
     wavelengths0 = deepcopy(wavelengths)
     # c.show()
     # raise ValueError()
     c.flatten()
-    prob = make_pic_sim_problem(path, c,
-                                layer_stack=layer_stack,
-                                wavelengths=wavelengths,
-                                study="inverse_design",
-                                keys=keys, ** kwargs)
+    prob = make_prob(path, c,
+                     layer_stack=layer_stack,
+                     wavelengths=wavelengths,
+                     study="inverse_design",
+                     keys=keys, ** kwargs)
     wavelengths = prob["wavelengths"]
 
     prob["restart"] = restart

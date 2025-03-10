@@ -41,7 +41,7 @@ function f2(((u, um), p, (dt, diffdeltas, diffpadvals, source_instances,), (t0, 
 end
 
 function solve(prob, models=nothing;
-    save_memory=false, ulims=(-3, 3), framerate=nothing, showfield=:Hz, path="", #subpixel=true,
+    save_memory=false, ulims=(-3, 3), framerate=nothing, showfield=:Hz, path="", verbose=true,
     kwargs...)
     @unpack approx_2D_mode, dt, u0, geometry, source_instances, monitor_instances, Ttrans, canvas_instances, Tss, grid, array = prob
 
@@ -73,7 +73,7 @@ function solve(prob, models=nothing;
 
     @ignore_derivatives delete!(ENV, "t0")
 
-    println("propagating transient fields...")
+    verbose && println("propagating transient fields...")
     timepassed()
     if save_memory
         (u,), = adjoint_reduce(f1, ts, init, ulims)
@@ -107,7 +107,7 @@ function solve(prob, models=nothing;
     @nograd ts
 
 
-    println("accumulating dft fields...")
+    verbose && println("accumulating dft fields...")
     if save_memory
         (u, um), = adjoint_reduce(f2, ts, init, ulims)
     else
@@ -117,7 +117,7 @@ function solve(prob, models=nothing;
 
     ignore_derivatives() do
         t0 = parse(Float64, ENV["t0"])
-        println("simulation done in $(time() - t0) seconds (includes some JIT compilation time).")
+        println("simulation done in $(time() - t0|>disp) s (includes JIT compilation).")
     end
 
     # return sum(abs, um[1][1].Ex + um[1][1].Ey + um[1][1].Hz)

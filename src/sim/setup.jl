@@ -52,7 +52,7 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
                 haspec = any(>=(PECVAL), last.(ϵ[1:end-1]))
                 if !haspec
                     # println("no PEC regions found in geometry")
-                    @time geometry[:invϵ] = supersamplemesh(v, rulers; tensor=true, inv=true, z)
+                    @time geometry[:invϵ] = supersamplemesh(v, rulers; tensor=true, inv=true, z, big=!AUTODIFF())
                     # geometry[:invϵ] = [map(geometry[:ϵ][1]) do a
                     #     1 ./ a
                     # end]
@@ -392,7 +392,10 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
             prob.grid[k] = gpu(array, prob.grid[k])
         end
     end
-    println("\nsimulation setup complete")
+    println()
+    println("====")
+    println("simulation setup complete")
+    println()
     # println("Courant number: $Courant")
     println("backend: $backend")
     println("float: $F")
@@ -410,6 +413,7 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
 
     println()
     println("computation load: $(load|>disp) cell-steps")
+    println("====")
     println("")
     prob
 end

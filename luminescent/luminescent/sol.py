@@ -61,24 +61,24 @@ def solve(path, dev=False):
     #     env = '0;'
     # cmd = ["lumi", path]
     # try:
-    # run(["Luminescent", path])
+    run(["lumi", path])
     # except:
-    run(["julia", "-e", f'println(Base.active_project())'])
-    print("no binaries found - starting julia session to compile - will alternate between execution and JIT compilation - will take 3 mins before simulation starts.\nYou can take a break and come back :) ...")
+    # run(["julia", "-e", f'println(Base.active_project())'])
+    # print("no binaries found - starting julia session to compile - will alternate between execution and JIT compilation - will take 3 mins before simulation starts.\nYou can take a break and come back :) ...")
 
-    prob = json.loads(open(os.path.join(path, "problem.json"), "rb").read())
-    a = ['julia', '-e', ]
-    gpu_backend = prob["gpu_backend"]
-    _class = prob["class"]
-    if gpu_backend == "CUDA":
-        array = "cu"
-        pkgs = ",CUDA"
-    else:
-        array = "Array"
-        pkgs = ""
+    # prob = json.loads(open(os.path.join(path, "problem.json"), "rb").read())
+    # a = ['julia', '-e', ]
+    # gpu_backend = prob["gpu_backend"]
+    # _class = prob["class"]
+    # if gpu_backend == "CUDA":
+    #     array = "cu"
+    #     pkgs = ",CUDA"
+    # else:
+    #     array = "Array"
+    #     pkgs = ""
 
-    b = [f'using Luminescent{pkgs};{_class}run(raw"{path}",{array})']
-    run(a+b)
+    # b = [f'using Luminescent{pkgs};{_class}run(raw"{path}",{array})']
+    # run(a+b)
 
     # with Popen(cmd,  stdout=PIPE, stderr=PIPE) as p:
     #     if p.stderr is not None:

@@ -36,8 +36,8 @@ function lastrun(name=nothing; study=nothing, wd=joinpath(pwd(), "runs"))
     return p
 end
 
-function calc_sparams(probs, models=nothing; kwargs...)
-    sols = solve.(probs, (models,))
+function calc_sparams(probs, models=nothing; verbose=false)
+    sols = solve.(probs, (models,); verbose)
 
     coeffs = OrderedDict()
     for (sol, prob) in zip(sols, probs)

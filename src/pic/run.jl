@@ -149,7 +149,7 @@ function picrun(path, array=Array; kw...)
     t0 = time()
     println("compiling simulation code...")
     if study == "sparams"
-        global res = calc_sparams(probs; framerate, path)
+        global res = calc_sparams(probs; verbose=true)
         @unpack S, T, sols = res
         plotsim(probs[1] |> cpu, sols[1] |> cpu, ; path=joinpath(path, "sim.png"))
         sol = (; sparam_family(S)...,
@@ -182,12 +182,12 @@ function picrun(path, array=Array; kw...)
         println("")
         # iters = 1
         for i = 1:iters
-            println("====($i)  ")
+            println("[$i] ====  ")
             stop = i == iters
             function f(model)
                 models = [model]
                 res = calc_sparams(probs, models;
-                    save_memory, path, framerate)
+                )
                 @debug targets
                 # return res
                 # @unpack S, sols = res
@@ -292,7 +292,7 @@ function picrun(path, array=Array; kw...)
             GC.gc(true)
             println("====\n")
         end
-        println("Done in $(time() - t0) .")
+        println("iteration done in $((time() - t0)|>disp) s")
         # global sols
         # plotsim(probs[1] |> cpu, sols[1] |> cpu, ; path=PLOT)
     end

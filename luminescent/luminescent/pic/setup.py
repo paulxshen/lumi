@@ -112,7 +112,6 @@ def setup(path, c, study, nres, center_wavelength,
         else:
             assert not p
             margins.append(xmargin)
-    print(margins)
 
     #
     modexmargin = .6*xmargin
@@ -128,7 +127,6 @@ def setup(path, c, study, nres, center_wavelength,
     prob["zcore"] = zcore
     # prob["L"] = [l, w, h]
 
-    c.show()
     _c = gf.Component()
     kwargs = dict()
     for (orientation, side, length, p) in zip([0, 90, 180, 270], ["right", "top", "left", "bottom"], margins, ps):

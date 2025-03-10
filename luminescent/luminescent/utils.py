@@ -208,7 +208,6 @@ def material_voxelate(c,  zmin, zmax, layers, layer_stack, path):
     c.flatten()
     stacks = sorted(stacks, key=lambda x: -x[0])
     layer_stack_info = dict()
-    c.show()
     # raise NotImplementedError("This is a stub")
     lb, ub = c.bbox_np()
     # bbox = [[**lb, zmin], [**ub, zmax]]
@@ -330,7 +329,6 @@ def save_problem(prob, path):
         #   compiling julia code...
         #   """)
     prob_path = os.path.join(path, "problem.json")
-    print(prob_path)
     with open(prob_path, "w") as f:
         # Write the BSON data to the file
         f.write(bson_data)

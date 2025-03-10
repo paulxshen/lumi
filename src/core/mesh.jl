@@ -1,10 +1,12 @@
 nc = 4
+
 function transit(a::T, b) where {T}
     n = ceil(Int, log(1.2, b / a))
     r = (b / a)^(1 / n) |> T
     # a * r .^ (0:n)
     a * r .^ [zeros(T, nc)..., (1:n)...]
 end
+
 function share(v, x)
     if v[end] > v[1]
         a = v[nc+1:end]
@@ -22,15 +24,16 @@ function partition(d, n, nres, nmax)
     c = ceil(Int, c)
     d / c, c
 end
+
 function makemesh(mvs, bbox, nres)
     nmax = maximum(last.(mvs))
 
-    rulers = [[(a, last(mvs)[2]), (b, nothing)] for (a, b) = eachrow(bbox)]
+    rulers = [[[a, last(mvs)[2]], [b, nothing]] for (a, b) = eachrow(bbox)]
     for (m, v) = reverse(mvs[1:end-1])
         x = boundingbox(m)
         @debug x
-        a = ustrip.(getfield(coords(x.min), :coords))-1f-3
-        b = ustrip.(getfield(coords(x.max), :coords))+1f-3
+        a = ustrip.(getfield(coords(x.min), :coords))
+        b = ustrip.(getfield(coords(x.max), :coords))
         for (ruler, a, b) = zip(rulers, a, b)
             i = searchsortedfirst(ruler, a; by=first)
             j = searchsortedfirst(ruler, b; by=first)
@@ -39,8 +42,24 @@ function makemesh(mvs, bbox, nres)
                 _b = ruler[j][1]
                 vr = ruler[j-1][2]
                 deleteat!(ruler, i:j-1)
-                insert!(ruler, i, (a, v))
-                b < _b && insert!(ruler, i + 1, (b, vr))
+                insert!(ruler, i, [a, v])
+                b < _b && insert!(ruler, i + 1, [b, vr])
+            end
+        end
+    end
+    for v=rulers
+        i=1
+        while i<length(v)
+            d=v[i+1][1]-v[i][1]
+            if d<1f-4
+                if isnothing(v[i][2])
+                    v[i][2]=v[i+1][2]
+                    deleteat!(v,i+1)
+                else
+                    deleteat!(v,i)
+                end
+            else
+                i+=1
             end
         end
     end
@@ -67,18 +86,23 @@ function makemesh(mvs, bbox, nres)
             if lgood && rgood
                 fill(Δ, n)
             elseif !lgood && !rgood
-                # Δ0, c0 = partition(dl, vl, nres, nmax)
-                # Δ1, c1 = partition(dr, vr, nres, nmax)
-                # L = transit(Δ0, Δ)
-                # R = transit(Δ1, Δ)
-                # s = d - (sum(L) + sum(R))
-                # if s > 0
-                #     Δs, ns, rm = partition(s, v, nres, nmax, true)
-                #     vcat(share(L, rm / 2), fill(Δs, ns), share(reverse(R), rm / 2))
-                # else
-                #     Δ, n = partition(d, max(vl, vr), nres, nmax)
-                #     fill(Δ, n)
-                # end
+                Δl, = partition(dl, vl, nres, nmax)
+                Δr,  = partition(dr, vr, nres, nmax)
+                L = transit(Δl, Δ)
+                R = transit(Δr, Δ)
+                r= d - (sum(L) + sum(R))
+                if r > 0
+                    Δ= L[end]+R[end]
+                    if r >=Δ
+                        m = floor(Int, r / Δ)
+                        Δs =       vcat(L, fill(r / m, m),reverse(R))
+                    else
+                        vcat(share(L, r / 2),  share(reverse(R), r / 2))
+                    end
+                else
+                    Δ, n = partition(d, max(vl, vr), nres, nmax)
+                    fill(Δ, n)
+                end
             else
                 if lgood
                     dlow, vlow = dl, vl

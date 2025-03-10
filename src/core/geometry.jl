@@ -60,13 +60,13 @@ function supersamplemesh(a::AbstractArray{T}, ratio=4) where {T}
     [j <= i ? v[i][j] : v[j][i] for i = 1:N, j = 1:N]
 end
 
-function supersamplemesh(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=false, z=nothing)
+function supersamplemesh(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=false, big=true, z=nothing)
     N = length(rulers)
     In = LinearAlgebra.I(N)
     sz = Tuple(length.(rulers) - 1)
-    δ = minimum.(diff.(rulers)) / 10
     rulers1 = isnothing(z) ? rulers : vcat(rulers, [z])
 
+    δ = minimum.(diff.(rulers1)) / 10
     c = map(Base.product(rulers1...)) do p
         ps = map((-δ, +δ)) do d
             Point((p + d)...)
@@ -96,7 +96,7 @@ function supersamplemesh(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false
         stop = getindex.(rulers, I + 1)
         Δ = stop - start
 
-        if inv && tensor
+        if inv && tensor && big
             start = start - Δ / 2
             stop = stop + Δ / 2
             start .= max.(start, first.(rulers))

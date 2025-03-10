@@ -11,15 +11,15 @@ from gdsfactory.cross_section import Section
 from gdsfactory.generic_tech import LAYER_STACK, LAYER
 
 
-def make_pic_sim_problem(path, c, nres,
-                         wavelengths,
-                         entries=None, keys=None,
-                         layer_stack=SOI,
-                         study="sparams",
+def make_prob(path, c, nres,
+              wavelengths,
+              entries=None, keys=None,
+              layer_stack=SOI,
+              study="sparams",
 
-                         wavelength=None,
-                         wl_res=.01,
-                         **kwargs):
+              wavelength=None,
+              wl_res=.01,
+              **kwargs):
     # c.show()
     # raise NotImplementedError("This is a stub")
     if wavelength:
