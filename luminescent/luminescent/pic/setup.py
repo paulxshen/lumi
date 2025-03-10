@@ -144,7 +144,7 @@ def setup(path, c, study, nres, center_wavelength,
 
     layers = set(c.layers)-set(exclude_layers)
 
-    TEMP = os.path.join(path, "TEMP")
+    TEMP = os.path.join(path, "temp")
     os.makedirs(TEMP, exist_ok=True)
     SURFACES = os.path.join(path, 'surfaces')
     os.makedirs(SURFACES, exist_ok=True)
