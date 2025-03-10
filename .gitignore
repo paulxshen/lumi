@@ -3,16 +3,6 @@
 /genruns
 venv/
 /test
-# temp*
-phantom*
-phantom.*
-phantom.py
-
-ant.py
-wg.py
-
-/ant
-/build
 
 # build
 # *.ipynb
