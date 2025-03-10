@@ -161,6 +161,7 @@ function solvemodes(ϵ, dl, λ, neigs, path; mode_solutions=nothing)
             size(ϵ) == size(mesheps) && sum(abs, ϵ - mesheps) / sum(abs, ϵ) < 1e-3 && dl == _dl && λ == _λ && neigs <= _neigs
         end
         if !isnothing(i)
+            println("using saved mode solutions")
             return mode_solutions[i][end][1:neigs]
         end
     end
@@ -200,7 +201,7 @@ function solvemodes(ϵ, dl, λ, neigs, path; mode_solutions=nothing)
     modes = [SortedDict([Symbol(k) => mode(k) for k = keys(mode) if string(k)[end] in "xy"]) |> pairs |> NamedTuple for mode in modes]
 
     if !isnothing(mode_solutions)
-        println("saving mode solutions")
+        # println("saving mode solutions")
         push!(mode_solutions, (ϵ, dl, λ, neigs, modes))
     end
     modes

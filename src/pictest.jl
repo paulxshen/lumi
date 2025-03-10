@@ -7,8 +7,8 @@ Random.seed!(1234)
 using CUDA
 RUNS = joinpath("build", "precompile_execution")
 # picrun(joinpath("test", "straight");)# array=cu)
-picrun(joinpath("test", "bend_R5"), cu)
-# picrun(joinpath("test", "euler_bend_R5"), cu)
+# picrun(joinpath("test", "bend_R5"), cu)
+picrun(joinpath("test", "euler_bend_R5"), cu)
 # picrun(joinpath("runs", "mode_converter"))
 
 # picrun(joinpath(RUNS, "tiny_2_float32_CUDA"), cu)#; framerate=10)

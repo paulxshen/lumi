@@ -149,13 +149,15 @@ function picrun(path, array=Array; kw...)
     t0 = time()
     println("compiling simulation code...")
     if study == "sparams"
-        @unpack S, sols = calc_sparams(probs;
-            framerate, path)
+        global res = calc_sparams(probs; framerate, path)
+        @unpack S, T, sols = res
         plotsim(probs[1] |> cpu, sols[1] |> cpu, ; path=joinpath(path, "sim.png"))
         sol = (; sparam_family(S)...,
             path, study)
-        println("T-params: ")
+        println("modal T-params: ")
         println(json(sol.T, 4))
+        println("total power T-params: ")
+        println(json(T, 4))
         open(SOL, "w") do f
             write(f, json(cpu(sol)))
         end

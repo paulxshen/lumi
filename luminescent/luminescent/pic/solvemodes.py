@@ -13,7 +13,7 @@ name = data["name"]
 is2d = data["is2d"]
 
 m, n = eps.shape
-print(m, n)
+# print(m, n)
 
 m += 1
 n += 1
@@ -40,7 +40,5 @@ else:
 neffs = [np.real(m.neff) for m in modes]
 modes = [{k: m.get_field(k, x, y) for k in [
     "Ex", "Ey", "Ez", "Hx", "Hy", "Hz"]} for m in modes]
-# print(modes[0]["Ex"].shape)
 for i, mode in enumerate(modes):
-    # print(mode["Ex"].shape)
     np.savez(os.path.join(path, f'{name}_mode_{i}.npz'), **modes[i])

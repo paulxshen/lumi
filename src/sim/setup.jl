@@ -25,9 +25,10 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
 
     deltas = diff.(rulers)
     @debug extrema.(deltas)
+    @debug deltas[end]
     N = length(rulers)
     sz = Tuple(length.(rulers) - 1)
-
+    # error("stop here")
     if !isnothing(approx_2D_mode)
         approx_2D_mode = Symbol(approx_2D_mode)
     end
@@ -51,17 +52,17 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
                 haspec = any(>=(PECVAL), last.(ϵ[1:end-1]))
                 if !haspec
                     # println("no PEC regions found in geometry")
-                    @time geometry[:invϵ] = tensorinv(v, rulers; tensor=true, inv=true, z)
+                    @time geometry[:invϵ] = supersamplemesh(v, rulers; tensor=true, inv=true, z)
                     # geometry[:invϵ] = [map(geometry[:ϵ][1]) do a
                     #     1 ./ a
                     # end]
                     geometry[:ϵ] = [1 ./ mean(diag(geometry[:invϵ]))]
                 else
-                    geometry[:ϵ] = tensorinv(v, rulers; z)
+                    geometry[:ϵ] = supersamplemesh(v, rulers; z)
                     geometry[:invϵ] = [1 ./ geometry[:ϵ][1]]
                 end
             else
-                geometry[k] = tensorinv(v, rulers; z)
+                geometry[k] = supersamplemesh(v, rulers; z)
                 if k == :μ
                     geometry[:invμ] = [map(geometry[:μ][1]) do a
                         1 ./ a
@@ -83,19 +84,16 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
     nmin = sqrt(ϵmin * μmin)
 
     dt = nmin / √(sum(v -> 1 / minimum(v)^2, deltas)) * relcourant
-    dt = 1 / ceil(1 / dt)
+    dt = 1 / ceil(1 / dt) |> F
 
-    maxdeltas = maximum.(deltas)
 
     v = 0.15 / dt |> F
-    δ = -2log(1e-6) / nmin / 2 / (2v) |> F
+    δ = -2log(1.0f-4) / nmin / 2 / (2v) |> F
     σpml = ϵmin * v
     mpml = μmin * v
 
-    pml_depths = max.(δ * pmlfracs, maxdeltas)
-    pml_depths = ceil.(pml_depths ./ maxdeltas) .* maxdeltas
-    @show σpml
-    @show pml_depths
+    pml_depths = δ * pmlfracs
+    @debug σpml pml_depths
 
     if N == 1
         field_names = (:Ez, :Hy)
@@ -309,7 +307,6 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
     diffdeltas = OrderedDict([
         k => begin
             vs = centroids.(vs)
-            # sz = length.(vs)
             N = length(vs)
             map(1:N, vs, eachrow(edges[k])) do i, v, (l, r)
                 s = i .== (1:N)
@@ -347,7 +344,7 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
         else
             Ttrans = 1
         end
-        Ttrans *= sum(dimensions * nmax)
+        Ttrans *= sum(dimensions * nmax) + 4
     end
 
     if Tss == nothing
@@ -365,10 +362,11 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
         end
     end
     if !isnothing(Tssmin)
-        @show Tssmin
         Tss *= Base.ceil(Int, Tssmin / Tss)
     end
     Ttrans, Tss = convert.(F, (Ttrans, Tss))
+    Tss = dt * round(Tss / dt)
+    Ttrans = dt * round(Ttrans / dt)
 
     T = Ttrans + Tss
     nt = round(Int, T / dt)
@@ -393,22 +391,25 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
         for k = [:diffdeltas]
             prob.grid[k] = gpu(array, prob.grid[k])
         end
-
-        # error("stop here")
-        # p = fmap(array, p, AbstractArray{<:Number})
     end
     println("\nsimulation setup complete")
     # println("Courant number: $Courant")
     println("backend: $backend")
     println("float: $F")
+    println()
+
     println("original size: $sz")
     println("padded size: $(sizes.default)")
-    println("cell count: $(prod(sizes.default))")
-    println("transient time: $Ttrans")
-    println("steady state time: $Tss")
-    println("total time: $T")
-    println("time steps: $(nt)")
-    println("computation load: $(load) cell-steps")
+    println("cell count: $(nv|>disp)")
+    println()
+
+    println("transient time: $(Ttrans|>disp)")
+    println("steady state time: $(Tss|>disp)")
+    println("total time: $(T|>disp)")
+    println("time steps: $(nt|>disp)")
+
+    println()
+    println("computation load: $(load|>disp) cell-steps")
     println("")
     prob
 end

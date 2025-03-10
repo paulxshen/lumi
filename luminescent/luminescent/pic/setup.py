@@ -20,7 +20,7 @@ from gdsfactory.generic_tech import LAYER_STACK, LAYER
 def setup(path, c, study, nres, center_wavelength,
           bbox_layer=BBOX_LAYER,
           zlims=None, core_layer=LAYER.WG,
-          port_source_offset="auto", port_margin="auto",
+          port_margin="auto",
           runs=[],  sources=[],
           layer_stack=SOI, materials=dict(),
           default_material='SiO2',
@@ -76,7 +76,7 @@ def setup(path, c, study, nres, center_wavelength,
     hcore = d.thickness
     zcore = d.zmin
 
-    zmargin = 3*hcore
+    zmargin = 4*hcore
     zcenter = zcore+hcore/2
 
     h = hcore+2*zmargin
@@ -100,7 +100,7 @@ def setup(path, c, study, nres, center_wavelength,
     ps = portsides(c)
     xmargin = ymargin = 2*port_width
 
-    source_port_margin = 4 * port_width  # if N == 2 else 6*port_width
+    source_port_margin = 2 * port_width if N == 2 else 6*port_width
 
     port_margin = center_wavelength/nres
     margins = []
@@ -115,8 +115,8 @@ def setup(path, c, study, nres, center_wavelength,
     print(margins)
 
     #
-    modexmargin = .8*xmargin
-    modezmargin = .8*zmargin
+    modexmargin = .6*xmargin
+    modezmargin = .6*zmargin
     wmode = port_width+2*modexmargin
     hmode = hcore+2*modezmargin
     zmode = zcore-modezmargin

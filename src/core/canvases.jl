@@ -69,12 +69,12 @@ function apply_canvas!(c, geometry, models)
 
         for k = _ks
             if k == :invϵ
-                # a = tensorinv(a, ratio; inv=true, tensor=true)
-                a = tensorinv(_a, ratio)
+                # a = supersamplemesh(a, ratio; inv=true, tensor=true)
+                a = supersamplemesh(_a, ratio)
             else
                 a = [downsample(_a, ratio)]
             end
-            # a=tensorinv(a,ratio)
+            # a=supersamplemesh(a,ratio)
 
             geometry[k] = map(geometry[k], a) do g, a
                 b = Buffer(g)

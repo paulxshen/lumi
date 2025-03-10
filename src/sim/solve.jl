@@ -6,7 +6,7 @@ function bell(t, dt, u=nothing)
         # end
 
         if floor(t + 0.001) > floor(t - dt + 0.001)
-            ENV["autodiff"] == "0" && println("simulation period $t, took $(timepassed()) seconds")
+            ENV["autodiff"] == "0" && t > 0.1 && println("period $(int(t)),  $(timepassed()|>disp) s")
         end
         if !haskey(ENV, "t0")
             ENV["t0"] = time()
@@ -66,14 +66,15 @@ function solve(prob, models=nothing;
     durations = [Ttrans, Tss]
     T = cumsum(durations)
     us0 = (u0,)
-    global init = (us0, p, (dt, diffdeltas, diffpadvals, source_instances,))
+    init = (us0, p, (dt, diffdeltas, diffpadvals, source_instances,))
 
-    ts = 0:dt:T[1]-F(0.001)
+    ts = range(0, T[1] - dt, int(durations[1] / dt))
     @nograd ts
 
     @ignore_derivatives delete!(ENV, "t0")
 
     println("propagating transient fields...")
+    timepassed()
     if save_memory
         (u,), = adjoint_reduce(f1, ts, init, ulims)
     else
@@ -101,8 +102,8 @@ function solve(prob, models=nothing;
         end
     end
 
-    ts = ts[end]+dt:dt:T[2]-F(0.001)
-    init = ((u, 0), p, (dt, diffdeltas, diffpadvals, source_instances,), (T[2], durations[2], monitor_instances,))
+    ts = range(T[1], T[2] - dt, int(durations[2] / dt))
+    init = ((u, 0), p, (dt, diffdeltas, diffpadvals, source_instances,), (T[1], durations[2], monitor_instances,))
     @nograd ts
 
 
@@ -150,8 +151,8 @@ function solve(prob, models=nothing;
                 ap = inner.(modes, (um,), (m.plane_deltas,))
                 am = inner.(_modes, (um,), (m.plane_deltas,))
             end
-
-            um, ap, am
+            P = real(inner(um, um, m.plane_deltas))
+            um, ap, am, P
         end
     end
 
@@ -159,6 +160,7 @@ function solve(prob, models=nothing;
     um = [[v[1] for v = v] for v in v]
     ap = [[v[2] for v = v] for v in v]
     am = [[v[3] for v = v] for v in v]
+    P = [[v[4] for v = v] for v in v]
 
     # nm = length(monitor_instances)
     # nλ = length(wavelengths(monitor_instances[1]))
@@ -167,22 +169,22 @@ function solve(prob, models=nothing;
 
     # am = [[v[j][i][3] for j = 1:nλ] for i = 1:nm]
 
-    return Solution(u, p, ulims, um, ap, am)
+    return Solution(u, p, um, P, ap, am)
 end
 
 
 struct Solution
     u
     p
-    ulims
     um
+    P
     ap
     am
 end
 @functor Solution
 
 function (s::Solution)(k, m, w=1, mn=0)
-    @unpack u, ulims, um, ap, am = s
+    @unpack u, P, um, ap, am = s
     if k == "a+"
         return s.ap[m][w][mn+1]
     elseif k == "a-"
@@ -192,7 +194,7 @@ function (s::Solution)(k, m, w=1, mn=0)
     elseif k == "P_TM"
         return flux(um[m][w], :TM)
     elseif k == "P"
-        return flux(um[m][w])
+        return P[m][w]
     elseif k == "um"
         return um[m][w]
     end

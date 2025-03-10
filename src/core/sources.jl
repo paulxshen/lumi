@@ -247,29 +247,28 @@ function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g; z)
     box_rulers = getindex.(rulers, range.(start, stop))
     box_deltas = diff.(box_rulers)
 
-    global I = dict([k => begin
+    I = dict([k => begin
         l, r = eachcol(offsets[k])
         a = start - l
         range.(a, a + box_size - 1, box_size)
     end for k = ks])
-    pos = round(Int, indexof.(rulers, center))
 
     # 
     if !isnothing(λmodenums)
-        global plane_size = floor.(Int, dimensions / dx)
-        global signed_plane_start = center - P * dx * F(collect((plane_size - 1) / 2))
+        plane_size = floor.(Int, dimensions / dx)
+        signed_plane_start = center - P * dx * F(collect((plane_size - 1) / 2))
 
-        global plane_points = map(CartesianIndices(Tuple(plane_size))) do I
+        plane_points = map(CartesianIndices(Tuple(plane_size))) do I
             P * dx * collect(Tuple(I) - 1) + signed_plane_start
         end
-        global plane_Is = map(plane_points) do p
+        plane_Is = map(plane_points) do p
             v = indexof.(rulers, p) - start + F(0.5)
             v = max.(v, 1)
             v = min.(v, box_size)
         end
         plane_deltas = dx
 
-        global ϵmode = samplemesh(ϵ, plane_points; z) .|> F
+        ϵmode = samplemesh(ϵ, plane_points; z) .|> F
         # if N == 3
         #     display(heatmap(ϵmode))
         # else
@@ -332,7 +331,6 @@ function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g; z)
         _λmodes = fmap(F, _λmodes)
         _λmodes = sort(_λmodes, by=kv -> kv[1])
     end
-    # m = vmap(x -> C.(x), m)
 
     r = (; λmodes, _λmodes, box_size, box_rulers, bbox, box_deltas, I, plane_points, plane_Is, plane_deltas,)
 end

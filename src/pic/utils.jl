@@ -37,13 +37,8 @@ function lastrun(name=nothing; study=nothing, wd=joinpath(pwd(), "runs"))
 end
 
 function calc_sparams(probs, models=nothing; kwargs...)
-    lminloss = 0
     sols = solve.(probs, (models,))
 
-    ignore_derivatives() do
-    end
-
-    # return sols[1]
     coeffs = OrderedDict()
     for (sol, prob) in zip(sols, probs)
         @unpack source_instances, monitor_instances = prob
@@ -73,10 +68,21 @@ function calc_sparams(probs, models=nothing; kwargs...)
         # Symbol(
         coeffs[λ][k][1] / coeffs[λ][Symbol("$s,$s")][2]
     end for (k) = keys(coeffs[λ])]) for (λ) = keys(coeffs)])
-    # if source_mn == mn == 0
-    #     coeffs[λ]["$monitor_port,$source_port")] = v
-    # end
-    return (; S, sols, lminloss)
+
+    prob = probs[1]
+    sol = sols[1]
+    @unpack source_instances, monitor_instances = prob
+    j = 1
+    λs = keys(coeffs)
+
+    T = OrderedDict([
+        λ => OrderedDict([
+            begin
+                Ps = -sol("P", j, w)
+                Symbol("$i,$j") => sol("P", i, w) / Ps
+            end for i = eachindex(monitor_instances) if i != j])
+        for (w, λ) in enumerate(λs)])
+    return (; S, T, sols,)
 end
 function make_geometry(masks, margins, lb, dl, geometry, canvases, design_config, materials; ϵeff=nothing, F=Float32, perturb=nothing)
     isnothing(masks) && return geometry

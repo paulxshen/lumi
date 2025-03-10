@@ -38,7 +38,7 @@ end
 _size(s::Real, n) = int(s * n)
 _size(s, _) = int(sum(s))
 
-function tensorinv(a::AbstractArray{T}, ratio=4) where {T}
+function supersamplemesh(a::AbstractArray{T}, ratio=4) where {T}
     N = ndims(a)
     In = LinearAlgebra.I(N)
     # spacings = _downvec.(spacings, size(a))
@@ -60,13 +60,13 @@ function tensorinv(a::AbstractArray{T}, ratio=4) where {T}
     [j <= i ? v[i][j] : v[j][i] for i = 1:N, j = 1:N]
 end
 
-function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=false, z=nothing)
+function supersamplemesh(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=false, z=nothing)
     N = length(rulers)
     In = LinearAlgebra.I(N)
-    ns = length.(rulers)
-    sz = Tuple(ns - 1)
+    sz = Tuple(length.(rulers) - 1)
     δ = minimum.(diff.(rulers)) / 10
     rulers1 = isnothing(z) ? rulers : vcat(rulers, [z])
+
     c = map(Base.product(rulers1...)) do p
         ps = map((-δ, +δ)) do d
             Point((p + d)...)
@@ -97,8 +97,8 @@ function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=
         Δ = stop - start
 
         if inv && tensor
-            start = start - Δ / 3
-            stop = stop + Δ / 3
+            start = start - Δ / 2
+            stop = stop + Δ / 2
             start .= max.(start, first.(rulers))
             stop .= min.(stop, last.(rulers))
             Δ = stop - start
@@ -119,7 +119,7 @@ function tensorinv(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false, inv=
         if tensor && inv
             n = imnormal(a)
             P = n * n'
-            P * mean(1 ./ a) + (LinearAlgebra.I - P) / mean(a)
+            P * mean(1 ./ a) + (In - P) / mean(a)
         elseif !tensor
             v = mean(a)
             inv && return 1 / v
