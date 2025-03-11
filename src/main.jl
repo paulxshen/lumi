@@ -39,6 +39,7 @@ include("plots.jl")
 
 
 function julia_main()::Cint
+    println("running Luminescent julia backend")
     if !isempty(ARGS)
         picrun(ARGS[1])
     end

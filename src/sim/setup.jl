@@ -21,7 +21,9 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
 
     relcourant = F(relcourant)
     bbox, nres, = F.((bbox, nres,))
-    rulers = makemesh([(m, sqrt(v)) for (m, v) = ϵ], bbox, nres) |> F
+
+    T = Float32
+    rulers = makemesh([(m, sqrt(v) |> T) for (m, v) = ϵ], bbox |> T, nres |> T) |> F
 
     deltas = diff.(rulers)
     @debug extrema.(deltas)
@@ -392,8 +394,9 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
             prob.grid[k] = gpu(array, prob.grid[k])
         end
     end
-    println()
     println(BREAK)
+    println()
+
     println("simulation setup complete")
     println()
     # println("Courant number: $Courant")

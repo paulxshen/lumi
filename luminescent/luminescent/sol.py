@@ -46,12 +46,12 @@ def solve(path, dev=False):
     # start_time = time.time()
 
     def run(cmd):
-
+        print("="*40)
+        print()
         proc = Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # proc.wait()
         with proc:
             for line in proc.stdout:
-
                 print(str(line.decode().strip()), flush=True)
             err_message = proc.stderr.read().decode()
             print(err_message)
@@ -135,23 +135,18 @@ def load(path, show=True):
             # c.write_gds(os.path.join(path, "optimized_component.gds"))
 
         if show:
-            i = 1
-            while True:
-                p = os.path.join(path, f"run_{i}.png")
-                if os.path.exists(p):
-                    img = Image.open(p)
-                    img.show()
-                    try:
-                        display(img)
-                    except:
-                        pass
-                    i += 1
-                else:
-                    break
+            p = os.path.join(path, f"sim.png")
+            if os.path.exists(p):
+                img = Image.open(p)
+                img.show()
+                try:
+                    display(img)
+                except:
+                    pass
 
             _sol = {k: sol[k] for k in ["T", "dB", "S",
                                         "phasors", "total_power_T", "total_power_dB"]}
-            _sol["optimized_canvases"] = "[[...]]"
+            # _sol["optimized_canvases"] = "[[...]]"
             pprint(_sol)
 
     if show:

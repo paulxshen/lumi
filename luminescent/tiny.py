@@ -25,7 +25,7 @@ targets = {"tparams": {
     1.5: {
         "2,1": 1.0
     }}}
-for dtype in ["float32", 'float16']:
+for dtype in ['float16']:
     path = os.path.join(dir, f"back_{dtype}")
     lumi.make_design_prob(
         path,  c, targets,

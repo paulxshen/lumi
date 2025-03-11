@@ -50,7 +50,7 @@ function picrun(path, array=Array; kw...)
     fns = readdir(joinpath(path, "surfaces"), join=true)
     sort!(fns)
     @debug fns
-    global meshes = getfield.(GeoIO.load.(fns, numbertype=F), :domain) .|> (Scale(1 / λ, 1 / λ, 1 / λ,),)
+    global meshes = getfield.(GeoIO.load.(fns, numbertype=Float32), :domain) .|> (Scale(1 / λ, 1 / λ, 1 / λ,),)
     global eps = [materials(string(split(basename(fn), "_")[2])).epsilon |> F for fn = fns]
     meps = zip(meshes, eps)
     epdefault = F(epdefault)

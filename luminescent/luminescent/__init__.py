@@ -12,7 +12,7 @@ from .pic.inverse_design import *
 from .pic.sparams import *
 
 from .gen.setup import *
-print("imported luminescent")
+print("running luminescent python frontend")
 
 
 # __all__ = [

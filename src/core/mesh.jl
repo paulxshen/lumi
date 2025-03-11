@@ -47,16 +47,19 @@ function makemesh(mvs, bbox, nres)
             end
         end
     end
-    for v=rulers
+    for ruler=rulers
         i=1
-        while i<length(v)
-            d=v[i+1][1]-v[i][1]
-            if d<1f-3
-                if isnothing(v[i][2])
-                    v[i][2]=v[i+1][2]
-                    deleteat!(v,i+1)
+        while i<length(ruler)
+            v=ruler[i][2]
+            vl=i==1 ? 0 : ruler[i-1][2]
+            vr=i+1==length(ruler) ? 0 : ruler[i+1][2]
+            d=ruler[i+1][1]-ruler[i][1]
+            if v<=max(vl,vr) && d<=1/nres/v
+                if v<=vl
+                    deleteat!(ruler,i)
                 else
-                    deleteat!(v,i)
+                    ruler[i][2]=ruler[i+1][2]
+                    deleteat!(ruler,i+1)
                 end
             else
                 i+=1

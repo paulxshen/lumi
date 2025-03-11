@@ -178,7 +178,8 @@ function solvemodes(ϵ, dl, λ, neigs, path; mode_solutions=nothing)
         is2d = true
         ϵ = stack([ϵ, ϵ, ϵ, ϵ])
     end
-    npzwrite(joinpath(path, "args.npz"), Dict("eps" => ϵ,
+    F = Float32
+    npzwrite(joinpath(path, "args.npz"), Dict("eps" => F(ϵ),
         "dl" => dl, "center_wavelength" => λ, "neigs" => neigs, "name" => name, "is2d" => is2d))
     fn = joinpath(path, "solvemodes.py")
     try
