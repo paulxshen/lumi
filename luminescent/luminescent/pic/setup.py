@@ -146,11 +146,11 @@ def setup(path, c, study, nres, center_wavelength,
 
     TEMP = os.path.join(path, "temp")
     os.makedirs(TEMP, exist_ok=True)
-    SURFACES = os.path.join(path, 'surfaces')
-    os.makedirs(SURFACES, exist_ok=True)
+    BODIES = os.path.join(path, 'bodies')
+    os.makedirs(BODIES, exist_ok=True)
 
     layer_stack_info = material_voxelate(
-        c,  zmin, zmax, layers, layer_stack, SURFACES)
+        c,  zmin, zmax, layers, layer_stack, BODIES)
     dir = os.path.dirname(os.path.realpath(__file__))
     print(dir)
     fn = os.path.join(dir, "solvemodes.py")

@@ -13,7 +13,7 @@ RUNS = joinpath("build", "precompile_execution")
 
 # picrun(joinpath(RUNS, "tiny_2_float32_CUDA"), cu)#; framerate=10)
 # # picrun(joinpath(RUNS, "tiny_3_float32_CUDA"), cu)
-# picrun(joinpath(RUNS, "tiny_3_float32_None"))
+picrun(joinpath(RUNS, "tiny_3_float32_None"))
 # picrun(joinpath(RUNS, "back_float32"))
 # picrun(joinpath(RUNS, "back_float32"))# array=cu)
 

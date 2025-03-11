@@ -47,7 +47,7 @@ function picrun(path, array=Array; kw...)
 
     layer_stack = sort(collect(pairs(layer_stack)), by=kv -> kv[2].mesh_order) |> OrderedDict
     ks = keys(layer_stack)
-    fns = readdir(joinpath(path, "surfaces"), join=true)
+    fns = readdir(joinpath(path, "bodies"), join=true)
     sort!(fns)
     @debug fns
     global meshes = getfield.(GeoIO.load.(fns, numbertype=Float32), :domain) .|> (Scale(1 / λ, 1 / λ, 1 / λ,),)

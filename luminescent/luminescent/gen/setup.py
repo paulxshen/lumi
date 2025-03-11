@@ -37,8 +37,6 @@ def make_sim_problem(
     df=None,
     gpu=None, dorun=True
 ):
-    RATIO = 2
-
     materials = {**MATERIALS, **materials}
 
     if not wavelengths:
@@ -50,19 +48,14 @@ def make_sim_problem(
     wavelengths, center_wavelength, T = adjust_wavelengths(
         wavelengths, center_wavelength, wl_res)
 
-    if nres:
-        dx = center_wavelength/nres
-    dy = dz = dx
-    dl = dx/RATIO
-
-    GEOMETRY = os.path.join(path, "geometry")
+    BODIES = os.path.join(path, "geometry")
     bbox = [[None, None, None], [None, None, None]]
-    for material in os.listdir(GEOMETRY):
-        for fn in os.listdir(os.path.join(GEOMETRY, material)):
+    for material in os.listdir(BODIES):
+        for fn in os.listdir(os.path.join(BODIES, material)):
             if fn.lower().endswith(".stl"):
-                STL = os.path.join(GEOMETRY, material, fn)
+                STL = os.path.join(BODIES, material, fn)
                 print(STL)
-                # pymeshfix.clean_from_file(STL, STL)
+                pymeshfix.clean_from_file(STL, STL)
                 mesh = pv.read(STL)
                 for (i, v, w) in zip(range(3), bbox[0], [mesh.bounds[i] for i in [0, 2, 4]]):
                     if v is None or w < v:
@@ -76,31 +69,8 @@ def make_sim_problem(
     bbox[1] = [a+dx*floor((b-a)/dx) for (a, b) in zip(bbox[0], bbox[1])]
 
     print(bbox)
-    for material in os.listdir(GEOMETRY):
-        for fn in os.listdir(os.path.join(GEOMETRY, material)):
-            if fn.lower().endswith(".stl"):
-                STL = os.path.join(GEOMETRY, material, fn)
-                mesh = pv.read(STL)
-                # mesh.plot()
-                im = stl_to_array(mesh, dl,  bbox)
-                print(im.shape)
-
-                # fig = plt.figure()
-                # ax = fig.add_subplot(111, projection='3d')
-                # ax.voxels(im, edgecolor='k')
-                # plt.show()
-
-                name = fn[:-4]
-                np.save(os.path.join(GEOMETRY, material, f'{name}.npy'), im)
 
     L = (bbox[1][0]-bbox[0][0], bbox[1][1]-bbox[0][1], bbox[1][2]-bbox[0][2])
-    xs = np.linspace(bbox[0][0], bbox[1][0], 1 +
-                     round((bbox[1][0]-bbox[0][0])/dx)).tolist()
-    ys = np.linspace(bbox[0][1], bbox[1][1], 1 +
-                     round((bbox[1][1]-bbox[0][1])/dy)).tolist()
-    zs = np.linspace(bbox[0][2], bbox[1][2], 1 +
-                     round((bbox[1][2]-bbox[0][2])/dz)).tolist()
-#  dtype, center_wavelength, dl, xs, ys, zs, study, layer_stack, sources, monitors, materials, L, Ttrans, Tss, wavelengths
     if not Tss:
         Tss = T if len(wavelengths) > 1 else None
     prob = {
@@ -111,11 +81,7 @@ def make_sim_problem(
         "study": study,
         'dtype': dtype,
         'center_wavelength': center_wavelength,
-        'dl': dl,
-        'dx': dx,
-        'xs': xs,
-        'ys': ys,
-        'zs': zs,
+
         'layer_stack': layer_stack,
         'materials': materials,
         'L': L,

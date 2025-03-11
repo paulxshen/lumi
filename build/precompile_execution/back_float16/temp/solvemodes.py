@@ -2,10 +2,13 @@ import numpy as np
 import EMpy
 import os
 import sys
+import json
 
 path = sys.argv[1]
-data = np.load(os.path.join(path, "args.npz"))
+# data = np.load(os.path.join(path, "args.npz"))
+data = json.loads(open(os.path.join(path, "args.json"), "rb").read())
 eps = data["eps"]
+eps = np.array(eps).T
 dl = data["dl"]
 λ = data["center_wavelength"]
 neigs = data["neigs"]

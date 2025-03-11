@@ -179,8 +179,12 @@ function solvemodes(ϵ, dl, λ, neigs, path; mode_solutions=nothing)
         ϵ = stack([ϵ, ϵ, ϵ, ϵ])
     end
     F = Float32
-    npzwrite(joinpath(path, "args.npz"), Dict("eps" => F(ϵ),
-        "dl" => dl, "center_wavelength" => λ, "neigs" => neigs, "name" => name, "is2d" => is2d))
+    d = Dict("eps" => F(ϵ),
+        "dl" => dl, "center_wavelength" => λ, "neigs" => neigs, "name" => name, "is2d" => is2d)
+    # npzwrite(joinpath(path, "args.npz"),d)
+    open(joinpath(path, "args.json"), "w") do f
+        write(f, JSON.json(d))
+    end
     fn = joinpath(path, "solvemodes.py")
     try
         run(`python $fn $path`)

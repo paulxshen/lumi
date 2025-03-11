@@ -2,7 +2,7 @@
 from pprint import pprint
 import os
 import json
-import cv2
+# import cv2
 import numpy as np
 from .pic.inverse_design import *
 from .pic.sparams import *
