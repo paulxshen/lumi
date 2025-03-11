@@ -156,7 +156,7 @@ function picrun(path, array=Array; kw...)
         sol = (;
             sparam_family(S)...,
             total_power_T=T,
-            total_power_T_dB=todB(T),
+            total_power_dB=todB(T),
             path, study)
         println("modal T-params: ")
         println(json(sol.T, 4))
