@@ -61,7 +61,7 @@ def solve(path, dev=False):
     #     env = '0;'
     # cmd = ["lumi", path]
     # try:
-    run(["lumi", path])
+    run(["Luminescent", path])
     # except:
     # run(["julia", "-e", f'println(Base.active_project())'])
     # print("no binaries found - starting julia session to compile - will alternate between execution and JIT compilation - will take 3 mins before simulation starts.\nYou can take a break and come back :) ...")
@@ -88,7 +88,7 @@ def solve(path, dev=False):
     # subprocess.run()
     # print(f"julia simulation took {time.time()-start_time} seconds")
     # print(f"images and results saved in {path}")
-    # sol = load_solution(path=path)
+    # sol = load(path=path)
     # return sol
 
 
@@ -99,7 +99,7 @@ def load_sparams(sparams):
                                 for k, v in d.items()} for center_wavelength, d in sparams.items()}
 
 
-def load_solution(path, show=True):
+def load(path, show=True):
     path = os.path.abspath(path)
     print(f"loading solution from {path}")
     prob = json.loads(open(os.path.join(path, "problem.json"), "rb").read())
@@ -121,8 +121,8 @@ def load_solution(path, show=True):
         elif prob["study"] == "inverse_design":
             l = [np.array(d) for d in sol["optimized_canvases"]]
             sol["optimized_canvases"] = l
-            print(
-                f"loading optimized design regions at resolution {sol['dl']}")
+            # print(
+            #     f"loading optimized design regions at resolution {sol['dl']}")
             # for i, a in enumerate(l):
             #     path = f"optimized_canvas_{i+1}.png"
             #     Image.fromarray(np.flip(np.uint8((1-a)) * 255, 0),
@@ -149,7 +149,8 @@ def load_solution(path, show=True):
                 else:
                     break
 
-            _sol = {k: sol[k] for k in ["T", "dB", "S", "phasors", "path", ]}
+            _sol = {k: sol[k] for k in ["T", "dB", "S",
+                                        "phasors", "total_power_T", "total_power_dB"]}
             _sol["optimized_canvases"] = "[[...]]"
             pprint(_sol)
 

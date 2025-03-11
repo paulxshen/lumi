@@ -152,7 +152,11 @@ function picrun(path, array=Array; kw...)
         global res = calc_sparams(probs; verbose=true)
         @unpack S, T, sols = res
         plotsim(probs[1] |> cpu, sols[1] |> cpu, ; path=joinpath(path, "sim.png"))
-        sol = (; sparam_family(S)...,
+
+        sol = (;
+            sparam_family(S)...,
+            total_power_T=T,
+            total_power_T_dB=todB(T),
             path, study)
         println("modal T-params: ")
         println(json(sol.T, 4))

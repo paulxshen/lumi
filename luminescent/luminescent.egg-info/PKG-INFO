@@ -1,0 +1,17 @@
+Metadata-Version: 2.2
+Name: luminescent
+Version: 1.0
+Summary: A description of your package
+Author: Paul Shen
+Author-email: pxshen@alumni.stanford.edu
+License-File: LICENSE
+Requires-Dist: gdsfactory
+Requires-Dist: pillow
+Requires-Dist: pymeshfix
+Requires-Dist: electromagneticpython
+Requires-Dist: sortedcontainers
+Requires-Dist: scikit-rf
+Dynamic: author
+Dynamic: author-email
+Dynamic: requires-dist
+Dynamic: summary

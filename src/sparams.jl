@@ -26,3 +26,7 @@ function sparam_family(S)
     sol = (; S, T, phasors, dB) |> pairs |> OrderedDict
 end
 
+todB(x) =
+    fmap(x) do x
+        10log10(x)
+    end

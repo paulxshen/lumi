@@ -1,0 +1,6 @@
+gdsfactory
+pillow
+pymeshfix
+electromagneticpython
+sortedcontainers
+scikit-rf

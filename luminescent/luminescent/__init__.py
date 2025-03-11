@@ -20,7 +20,7 @@ print("imported luminescent")
 #     "sparams_problem",
 #     "solve",
 #     # "apply_design",
-#     "load_solution",
+#     "load",
 #     "finetune",
 #     "load_problem",
 #     # "make_training_movie",

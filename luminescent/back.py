@@ -3,7 +3,7 @@ import luminescent as lumi
 
 
 path = os.path.join("runs", "back")
-# lumi.load_solution()
+# lumi.load()
 # raise NotImplementedError("This is a stub")
 c = lumi.mimo(west=1, east=1, l=.5, w=.5,  wwg=.5)
 targets = {"tparams": {

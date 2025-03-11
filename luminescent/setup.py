@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='luminescent',  # Your package name
-    version='0.5.1',  # Your package version
+    version='1.0',  # Your package version
     description='A description of your package',
     author='Paul Shen',
     author_email='pxshen@alumni.stanford.edu',
