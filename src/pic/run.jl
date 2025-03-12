@@ -31,6 +31,7 @@ function picrun(path, array=Array; kw...)
         @unpack canvases, lsolid, lvoid, targets, weights, eta, iters, restart, save_memory, design_config, stoploss = prob
     end
 
+    F = Float32
     dtype = lowercase(dtype)
     if contains(dtype, "16") && contains(dtype, "bf")
         F = BFloat16
