@@ -57,10 +57,10 @@ def setup(path, c, study, nres, center_wavelength,
 
     ports = {
         p.name: {
-            "center": (np.array(p.center)/1e3).tolist(),
+            "center": (np.array(p.center)/1e0).tolist(),
             "normal": [cos(p.orientation/180*pi), sin(p.orientation/180*pi)],
             "tangent": [-sin(p.orientation/180*pi), cos(p.orientation/180*pi)],
-            'width': p.width/1e3,
+            'width': p.width/1e0,
         }
         for p in c.get_ports_list(prefix="o")
     }
@@ -96,7 +96,7 @@ def setup(path, c, study, nres, center_wavelength,
         else:
             nonsource_ports.append(p.name)
 #
-    port_width = max([p.width/1e3 for p in c.ports])
+    port_width = max([p.width/1e0 for p in c.ports])
     ps = portsides(c)
     xmargin = ymargin = 2*port_width
 

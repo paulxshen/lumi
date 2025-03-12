@@ -119,8 +119,8 @@ def load(path, show=True):
         if prob["study"] == "sparams":
             pass
         elif prob["study"] == "inverse_design":
-            l = [np.array(d) for d in sol["optimized_canvases"]]
-            sol["optimized_canvases"] = l
+            # l = [np.array(d) for d in sol["optimized_canvases"]]
+            # sol["optimized_canvases"] = l
             # print(
             #     f"loading optimized design regions at resolution {sol['dl']}")
             # for i, a in enumerate(l):
@@ -133,6 +133,7 @@ def load(path, show=True):
             # sol["optimized_component"] = copy.deepcopy(c)
             # sol["optimized_component"] = c
             # c.write_gds(os.path.join(path, "optimized_component.gds"))
+            0
 
         if show:
             p = os.path.join(path, f"sim.png")

@@ -1,7 +1,7 @@
 /runs
 /picruns
 /genruns
-venv/
+env/
 /test
 
 # build

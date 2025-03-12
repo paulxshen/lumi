@@ -36,14 +36,13 @@ function CanvasInstance(canvas, grid, geometry; z=nothing)
     N = ndims(canvas)
     rulers = rulers.default
     deltas = deltas.default
-    global _a = rulers, bbox
     start = int.(indexof.(rulers[1:N], bbox[:, 1]), 0.1)
     stop = int.(indexof.(rulers[1:N], bbox[:, 2]), 0.1)
     sz = stop - start
     dx = deltas[1][start[1]]
 
     dl = dx / ratio
-    model = Blob(sz; solid_frac=1, lsolid=lsolid / dl, lvoid=lvoid / dl, symmetries, F,)
+    model = Blob(sz * ratio; solid_frac=1, lsolid=ratio * lsolid / dl, lvoid=ratio * lvoid / dl, symmetries, F,)
     if !isnothing(params)
         model.p .= params
     end
@@ -75,7 +74,6 @@ function apply_canvas!(c, geometry, models)
                 a = [downsample(_a, ratio)]
             end
             # a=supersamplemesh(a,ratio)
-
             geometry[k] = map(geometry[k], a) do g, a
                 b = Buffer(g)
                 b[:] = g

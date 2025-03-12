@@ -36,7 +36,7 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
     end
     pmlfracs = _pmlfracs(pmlfracs, N)
 
-    global geometry = OrderedDict()
+    geometry = OrderedDict()
     println("meshing geometry - can take few minutes...")
     for (k, v) = pairs((; ϵ, μ, σ, m, γ, β))
         if isa(v, Number)
@@ -325,7 +325,7 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
 
     dx = F(1 / nres / nmax)
     sizes = vmap(Tuple, sizes)
-    global grid = (; rulers, deltas, sizes, edges, offsets, boundvals, diffpadvals, diffdeltas, padvals, padamts, F, N, field_names, all_field_names, dx) |> pairs |> OrderedDict
+    grid = (; rulers, deltas, sizes, edges, offsets, boundvals, diffpadvals, diffdeltas, padvals, padamts, F, N, field_names, all_field_names, dx) |> pairs |> OrderedDict
     geometry = pad_geometry(geometry, padvals, padamts) |> pairs |> OrderedDict
 
 
@@ -382,7 +382,6 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
                       Ttrans, Tss,
                       geometry, nmax, nmin,
                       u0, dt, array,) |> pairs |> OrderedDict
-
     if array == Array
         backend = :CPU
     else
@@ -409,9 +408,9 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
     println("cell count: $(nv|>disp)")
     println()
 
-    println("transient time: $(Ttrans|>disp)")
-    println("steady state time: $(Tss|>disp)")
-    println("total time: $(T|>disp)")
+    println("transient time: $(Ttrans|>disp) periods")
+    println("steady state time: $(Tss|>disp) periods")
+    println("total time: $(T|>disp) periods")
     println("time steps: $(nt|>disp)")
 
     println()

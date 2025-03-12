@@ -1,5 +1,5 @@
 import os
-import pymeshfix
+# import pymeshfix
 import json
 from statistics import median
 from .constants import *
@@ -11,7 +11,7 @@ try:
     from IPython.display import display
 except ImportError:
     pass
-import pyvista as pv
+# import pyvista as pv
 
 # from .picToGDS import main
 
@@ -25,23 +25,6 @@ import trimesh
 # from gdsfactory import LAYER_VIEWS
 
 tol = .001
-
-
-def repair_obj_open3d(input_path, output_path):
-    """Repairs an OBJ file using Open3D."""
-    try:
-        mesh = o3d.io.read_triangle_mesh(input_path)
-        if mesh.is_empty():
-            raise ValueError("Failed to load mesh.")
-
-        # Perform operations to clean/repair mesh (example: remove non-manifold edges)
-        mesh.remove_non_manifold_edges()
-
-        # Save the repaired mesh
-        o3d.io.write_triangle_mesh(output_path, mesh)
-        print(f"Repaired OBJ file saved to {output_path}")
-    except Exception as e:
-        print(f"An error occurred: {e}")
 
 
 def get(c, i):
@@ -85,7 +68,7 @@ def portsides(c):
     xmin0, ymin0 = bbox[0]
     xmax0, ymax0 = bbox[1]
     for p in ports:
-        x, y = np.array(p.center)/1e3
+        x, y = np.array(p.center)/1e0
 
         if abs(x - xmin0) < tol:
             res[2].append(p.name)
@@ -119,7 +102,7 @@ def add_bbox(c, layer, nonport_margin=0):  # , dx=None):
 
     for p in c.ports:
         # p = c.ports[k]
-        x, y = np.array(p.center)/1e3
+        x, y = np.array(p.center)/1e0
         if abs(x - xmin0) < tol:
             xmin = x
         if abs(x - xmax0) < tol:
@@ -152,54 +135,6 @@ def finish(c, name):
 
 def normal_from_orientation(orientation):
     return [cos(orientation/180*pi), sin(orientation/180*pi)]
-
-
-def stl_to_array(mesh: pv.PolyData, dl: float, bbox):
-    # x_min, x_max, y_min, y_max, z_min, z_max = mesh.bounds
-    # x_min,  y_min, z_min = bbox[0]
-    # x_max, y_max, z_max = bbox[1]
-    # x = np.linspace(x_min+dl/2, x_max-dl/2, round((x_max-x_min)/dl))
-    # y = np.linspace(y_min+dl/2, y_max-dl/2, round((y_max-y_min)/dl))
-    # z = np.linspace(z_min+dl/2, z_max-dl/2, round((z_max-z_min)/dl))
-    # x, y, z = np.meshgrid(x, y, z)
-
-    lb = [mesh.bounds[i] for i in [0, 2, 4]]
-    ub = [mesh.bounds[i] for i in [1, 3, 5]]
-    lb = [max(a, b) for a, b in zip(lb, bbox[0])]
-    ub = [min(a, b) for a, b in zip(ub, bbox[1])]
-
-    lims = [
-        [a+dl/2+dl*round((p-a)/dl-.01), b-dl/2-dl*round((b-q)/dl+.01)]
-        for (a, b, p, q) in zip(bbox[0], bbox[1], lb, ub)]
-    xyz = [np.linspace(a, b, 1+round((b-a)/dl)) for (a, b) in lims]
-    x, y, z = np.meshgrid(*xyz)
-
-    # Create unstructured grid from the structured grid
-    grid = pv.StructuredGrid(x, y, z)
-    ugrid = pv.UnstructuredGrid(grid)
-
-    # Get part of the mesh within the mesh's bounding surface.
-    selection = ugrid.select_enclosed_points(
-        mesh.extract_surface(),
-        tolerance=0.00,
-        check_surface=False,
-    )
-    mask = selection['SelectedPoints'].view(bool)
-    mask = mask.reshape(x.shape, order='F')
-    mask = np.array(mask)
-    mask = np.transpose(mask, (1, 0, 2))
-
-    start = [(lims[i][0]-a-dl/2)/dl for (i, a) in enumerate(bbox[0])]
-    stop = [a+l for (a, l) in zip(start, mask.shape)]
-
-    r = np.zeros(tuple([round((b-a)/dl)
-                 for a, b in zip(bbox[0], bbox[1])]), dtype=bool)
-    start = [max(round(a), 0) for a in start]
-    stop = [min(round(a), u) for a, u in zip(stop, r.shape)]
-    len = [s-t for s, t in zip(stop, start)]
-
-    r[start[0]:stop[0], start[1]:stop[1], start[2]        :stop[2]] = mask[:len[0], :len[1], :len[2]]
-    return r
 
 
 def material_voxelate(c,  zmin, zmax, layers, layer_stack, path):
@@ -236,7 +171,7 @@ def material_voxelate(c,  zmin, zmax, layers, layer_stack, path):
                 exclude_layers=set(layers)-{layer})
             OBJ = os.path.join(path, f'{order}_{m}_{k}.obj')
             trimesh.exchange.export.export_mesh(mesh, OBJ, 'obj')
-            pymeshfix.clean_from_file(OBJ, OBJ)
+            # pymeshfix.clean_from_file(OBJ, OBJ)
             # repair_obj_open3d(OBJ, OBJ)
 
             # STL = os.path.abspath(os.path.join(path, f"{k}.stl"))

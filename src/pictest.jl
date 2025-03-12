@@ -13,18 +13,18 @@ RUNS = joinpath("build", "precompile_execution")
 
 # picrun(joinpath(RUNS, "tiny_2_float32_CUDA"), cu)#; framerate=10)
 # # picrun(joinpath(RUNS, "tiny_3_float32_CUDA"), cu)
-picrun(joinpath(RUNS, "tiny_3_float32_None"))
-# picrun(joinpath(RUNS, "back_float32"))
+# picrun(joinpath(RUNS, "tiny_3_float32_None"))
+picrun(joinpath(RUNS, "back_float16"))
 # picrun(joinpath(RUNS, "back_float32"))# array=cu)
 
 # prob.canvas_instances[1]._frame[:ϵ]|>extrema
 # picrun(joinpath("runs", "demux"))
 
-for p = readdir("build/precompile_execution", join=true)
-    # if contains(string(p), "16") #&& contains(string(p), "back")
-    picrun(p)
-    # end
-end
+# for p = readdir("build/precompile_execution", join=true)
+#     # if contains(string(p), "16") #&& contains(string(p), "back")
+#     picrun(p)
+#     # end
+# end
 # # 
 
 # using Pkg

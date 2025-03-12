@@ -31,7 +31,6 @@ function picrun(path, array=Array; kw...)
         @unpack canvases, lsolid, lvoid, targets, weights, eta, iters, restart, save_memory, design_config, stoploss = prob
     end
 
-    F = Float32
     dtype = lowercase(dtype)
     if contains(dtype, "16") && contains(dtype, "bf")
         F = BFloat16
@@ -50,12 +49,12 @@ function picrun(path, array=Array; kw...)
     fns = readdir(joinpath(path, "bodies"), join=true)
     sort!(fns)
     @debug fns
-    global meshes = getfield.(GeoIO.load.(fns, numbertype=Float32), :domain) .|> (Scale(1 / λ, 1 / λ, 1 / λ,),)
-    global eps = [materials(string(split(basename(fn), "_")[2])).epsilon |> F for fn = fns]
+    meshes = getfield.(GeoIO.load.(fns, numbertype=Float32), :domain) .|> (Scale(1 / λ, 1 / λ, 1 / λ,),)
+    eps = [materials(string(split(basename(fn), "_")[2])).epsilon |> F for fn = fns]
     meps = zip(meshes, eps)
     epdefault = F(epdefault)
 
-    global models = nothing
+    models = nothing
     z = nothing
     if N == 2
         # midplane = Plane((0, 0, zcenter), (0, 0, 1))
@@ -85,8 +84,8 @@ function picrun(path, array=Array; kw...)
     boundaries = [] # unspecified boundaries default to PML
 
     λ = F(λ)
-    global runs = [SortedDict([k => isa(v, AbstractDict) ? SortedDict(v) : v for (k, v) = pairs(run)]) for run in runs]
-    global runs_sources = [
+    runs = [SortedDict([k => isa(v, AbstractDict) ? SortedDict(v) : v for (k, v) = pairs(run)]) for run in runs]
+    runs_sources = [
         begin
             sources = []
             for (port, sig) = SortedDict(run.sources) |> pairs
@@ -106,7 +105,7 @@ function picrun(path, array=Array; kw...)
     ]
     # sort!(runs_sources, by=x -> x.label)
 
-    global runs_monitors = [[
+    runs_monitors = [[
         begin
             @unpack center, frame, dimensions, wavelength_mode_numbers = m
             center = center[1:N]
@@ -136,7 +135,7 @@ function picrun(path, array=Array; kw...)
     else
         canvases = []
     end
-    global probs =
+    probs =
         [
             begin
                 setup(bbox / λ, nres, boundaries, sources, monitors, canvases;
@@ -149,7 +148,7 @@ function picrun(path, array=Array; kw...)
     t0 = time()
     println("compiling simulation code...")
     if study == "sparams"
-        global res = calc_sparams(probs; verbose=true)
+        res = calc_sparams(probs; verbose=true)
         @unpack S, T, sols = res
         plotsim(probs[1] |> cpu, sols[1] |> cpu, ; path=joinpath(path, "sim.png"))
 
@@ -176,13 +175,12 @@ function picrun(path, array=Array; kw...)
         prob = probs[1]
         model = prob.canvas_instances[1].model
         # minchange = 0.001
-        global opt = AreaChangeOptimiser(
+        opt = AreaChangeOptimiser(
             model; opt=Optimisers.Momentum(1, 0.7),
         )
         opt_state = Flux.setup(opt, model)
         # error("not implemented")
         println("starting optimization... first iter will be slow due to adjoint compilation.")
-        img = nothing
         println("")
         # iters = 1
         for i = 1:iters
@@ -190,13 +188,11 @@ function picrun(path, array=Array; kw...)
             stop = i == iters
             function f(model)
                 models = [model]
-                res = calc_sparams(probs, models;
-                )
+                r = calc_sparams(probs, models)
+                global S = r.S
+                global T = r.T
+                global sols = r.sols
                 @debug targets
-                # return res
-                # @unpack S, sols = res
-                global sols = res.sols
-                global S = res.S
                 l = 0
                 for k = keys(targets)
                     y = targets[k]
@@ -227,20 +223,13 @@ function picrun(path, array=Array; kw...)
                             fmap(abs2, S)
                         end
 
-                        # global a1 = S, y
                         yhat = [[yhat(_λ)(k) for k = keys(y[_λ])] for _λ = keys(y)]
                         yhat = flatten(yhat)
-                        # println("yhat: $yhat")
                         y = flatten(y)
-                        # println("y: $y")
                         Z = sum(abs, y)
                     end
-                    # _l = sum(,) do x
-                    #     (x) + x^2
-                    # end
                     v = err.(yhat, y) / Z
                     println("$(k) losses: $v ")
-                    # v = v .* @ignore_derivatives softmax(20v) * length(v)
                     l += sum(v)
                 end
                 println("modified total loss: $l\n")
@@ -248,12 +237,11 @@ function picrun(path, array=Array; kw...)
                 l
             end
 
-            # f(model)
             if iters == 1
                 f(model)
                 break
             else
-                @time global l, (dldm,) = Flux.withgradient(f, model)
+                @time l, (dldm,) = Flux.withgradient(f, model)
             end
             @assert !isnothing(dldm)
             if !isnothing(stoploss) && l < stoploss
@@ -266,13 +254,14 @@ function picrun(path, array=Array; kw...)
 
                 mkpath(CKPT)
                 models = [model]
-                global S, sols
+                global S, T, sols
                 sol = (;
                     sparam_family(S)...,
+                    total_power_T=T,
+                    total_power_dB=todB(T),
                     params=map(prob.canvas_instances) do c
                         c.model.p |> cpu
-                    end,
-                    path, study)
+                    end)
                 open(SOL, "w") do f
                     write(f, json(cpu(sol)))
                 end
@@ -298,13 +287,5 @@ function picrun(path, array=Array; kw...)
             println()
         end
         println("iteration done in $((time() - t0)|>disp) s")
-        # global sols
-        # plotsim(probs[1] |> cpu, sols[1] |> cpu, ; path=PLOT)
     end
-    # if length(sol.T) > 1
-    #     println("wavelengths may have been adjusted to facilitate simulation.")
-    # end
-    # global sols
-    # sol = sols[1]
-    # println(sol)
 end

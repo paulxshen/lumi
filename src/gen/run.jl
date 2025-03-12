@@ -58,7 +58,7 @@ function genrun(path, array=Array; kw...)
     # ϵmin = minimum(enum) |> Nf
 
     _sz = Any[0]
-    global geometry = DefaultDict(passkey=true) do k
+    geometry = DefaultDict(passkey=true) do k
         if k == :ϵ
             ones(Nf, _sz[1])
         elseif k == :σ
@@ -110,14 +110,14 @@ function genrun(path, array=Array; kw...)
     # error()
 
 
-    global sources = map(enumerate(sources)) do (i, s)
+    sources = map(enumerate(sources)) do (i, s)
         λsmode = (λs, s.mode)
         mask = npzread(joinpath(GEOMETRY, "sources", "$i.npy"))
         @assert !all(iszero, mask)
         mask = downsample(mask, ratio)
         Source(mask, F.(stack(s.frame)); λsmode)
     end
-    global monitors = map(enumerate(monitors)) do (i, s)
+    monitors = map(enumerate(monitors)) do (i, s)
         λsmode = (λs, s.mode)
         mask = npzread(joinpath(GEOMETRY, "monitors", "$i.npy"))
         @assert !all(iszero, mask)
@@ -129,14 +129,14 @@ function genrun(path, array=Array; kw...)
 
     boundaries = []
     N = 3
-    global prob = setup(dl / λ, boundaries, sources, monitors, deltas[1:N] / λ, box_deltas[1:N-1] / λ;
+    prob = setup(dl / λ, boundaries, sources, monitors, deltas[1:N] / λ, box_deltas[1:N-1] / λ;
         geometry..., array, F, deltas3=deltas / λ, Ttrans, Tss, Tssmin,
         # pmlfracs=[0.2, 0.2, 0.2],
         # pmlfracs=1 / λs[1] * ones(3),
         # σpml=4,#
         # pml_depths=[0.2, 0.2, 0.2])
     )
-    global g = prob._geometry.ϵ |> cpu
+    g = prob._geometry.ϵ |> cpu
     g = min.(g, 70)
     # volume(g) |> display
     # error()

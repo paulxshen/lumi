@@ -1,7 +1,4 @@
-function Base.setindex!(A::Vector{Int64}, x::Matrix{Float32}, i::Int64)
-    global _p = A, x, i
-    error("setindex! not implemented for Vector{Int64} and Matrix{Float32}")
-end
+
 function update(u, p, t, dt, diffdeltas, diffpadvals, source_instances)
     # unpack fields and geometry
     @unpack E, H = u
