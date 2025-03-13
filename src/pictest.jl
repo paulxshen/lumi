@@ -9,12 +9,12 @@ RUNS = joinpath("build", "precompile_execution")
 # picrun(joinpath("test", "straight");)# array=cu)
 # picrun(joinpath("test", "bend_R5"))
 # picrun(joinpath("test", "euler_bend_R5"), cu)
-# picrun(joinpath("runs", "mode_converter"))
+picrun(joinpath("runs", "ringR"))
 
 # picrun(joinpath(RUNS, "tiny_2_float32_CUDA"), cu)#; framerate=10)
 # # picrun(joinpath(RUNS, "tiny_3_float32_CUDA"), cu)
 # picrun(joinpath(RUNS, "tiny_3_float32_None"))
-picrun(joinpath(RUNS, "back_float16"))
+# picrun(joinpath(RUNS, "back_float16"))
 # picrun(joinpath(RUNS, "back_float32"))# array=cu)
 
 # prob.canvas_instances[1]._frame[:ϵ]|>extrema

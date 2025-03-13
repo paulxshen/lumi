@@ -41,8 +41,7 @@ function CanvasInstance(canvas, grid, geometry; z=nothing)
     sz = stop - start
     dx = deltas[1][start[1]]
 
-    dl = dx / ratio
-    model = Blob(sz * ratio; solid_frac=1, lsolid=ratio * lsolid / dl, lvoid=ratio * lvoid / dl, symmetries, F,)
+    model = Blob(sz * ratio; solid_frac=1, lsolid=ratio * lsolid / dx, lvoid=ratio * lvoid / dx, symmetries, F,)
     if !isnothing(params)
         model.p .= params
     end
