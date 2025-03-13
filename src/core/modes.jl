@@ -155,8 +155,6 @@ end
 
 
 function solvemodes(ϵ, dl, λ, neigs, path; mode_solutions=nothing)
-    global _a = ϵ
-    error("stop")
     if !isnothing(mode_solutions)
         i = findfirst(mode_solutions) do v
             mesheps, _dl, _λ, _neigs = v
