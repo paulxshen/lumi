@@ -4,28 +4,30 @@ ENV["JULIA_SSL_CA_ROOTS_PATH"] = ""
 ENV["JULIA_PKG_PRECOMPILE_AUTO"] = 0
 ENV["JULIA_DEBUG"] = "Main"
 Random.seed!(1234)
+AUTODIFF() = haskey(ENV, "AUTODIFF") && ENV["AUTODIFF"] == "1"
+
 # using CUDA
 RUNS = joinpath("build", "precompile_execution")
 # picrun(joinpath("test", "straight");)# array=cu)
 # picrun(joinpath("test", "bend_R5"))
 # picrun(joinpath("test", "euler_bend_R5"), cu)
-picrun(joinpath("runs", "ringR"))
+# picrun(joinpath("runs", "ring"))
 
 # picrun(joinpath(RUNS, "tiny_2_float32_CUDA"), cu)#; framerate=10)
 # # picrun(joinpath(RUNS, "tiny_3_float32_CUDA"), cu)
-# picrun(joinpath(RUNS, "tiny_3_float32_None"))
+# picrun(joinpath(RUNS, "a_2_float32_None"))
 # picrun(joinpath(RUNS, "back_float16"))
 # picrun(joinpath(RUNS, "back_float32"))# array=cu)
 
 # prob.canvas_instances[1]._frame[:ϵ]|>extrema
 # picrun(joinpath("runs", "demux"))
 
-# for p = readdir("build/precompile_execution", join=true)
-#     # if contains(string(p), "16") #&& contains(string(p), "back")
-#     picrun(p)
-#     # end
-# end
-# # 
+for p = readdir("build/precompile_execution", join=true)
+    # if contains(string(p), "16") #&& contains(string(p), "back")
+    picrun(p)
+    # end
+end
+# # # 
 
 # using Pkg
 # pkg"

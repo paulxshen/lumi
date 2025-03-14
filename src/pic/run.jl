@@ -1,20 +1,15 @@
-# function picrun(path)
-#     PROB = joinpath(path, "problem.json")
-#     prob = JSON.parse(read(open(PROB), String); dicttype=OrderedDict)
-#     gpu_backend = prob["gpu_backend"]
-#     array = if isnothing(gpu_backend)
-#         println("using CPU")
-#         Array
-#     else
-#         println("using $gpu_backend")
-#         cu
-#     end
-#     picrun(path, array)
-# end
+function picrun(path)
+    PROB = joinpath(path, "problem.json")
+    prob = JSON.parse(read(open(PROB), String); dicttype=OrderedDict)
+    gpu_backend = prob["gpu_backend"]
+    array = if isnothing(gpu_backend)
+        Array
+    else
+        cu
+    end
 
-function picrun(path, array=Array; kw...)
+    # function picrun(path, array=Array; kw...)
     Random.seed!(1)
-    ENV["autodiff"] = "0"
     PROB = joinpath(path, "problem.json")
     SOL = joinpath(path, "solution.json")
     TEMP = joinpath(path, "temp")
@@ -27,6 +22,10 @@ function picrun(path, array=Array; kw...)
         prob[string(k)] = v
     end
     @unpack name, N, approx_2D_mode, dtype, center_wavelength, runs, ports, study, zmin, zmax, zcenter, magic, framerate, layer_stack, materials, Ttrans, Tss, bbox, epdefault, nres = prob
+    if nres > 8
+        error("nres must be <= 8 in free version")
+    end
+
     if study == "inverse_design"
         @unpack canvases, lsolid, lvoid, targets, weights, eta, iters, restart, save_memory, design_config, stoploss = prob
     end
@@ -50,7 +49,7 @@ function picrun(path, array=Array; kw...)
     fns = readdir(joinpath(path, "bodies"), join=true)
     sort!(fns)
     @debug fns
-    meshes = getfield.(GeoIO.load.(fns, numbertype=Float32), :domain) .|> (Scale(1 / λ, 1 / λ, 1 / λ,),)
+    meshes = getfield.(GeoIO.load.(fns, numbertype=Float32), :domain)
     eps = [materials(string(split(basename(fn), "_")[2])).epsilon |> F for fn = fns]
     meps = zip(meshes, eps)
     epdefault = F(epdefault)
@@ -71,6 +70,7 @@ function picrun(path, array=Array; kw...)
     ϵ = meps
 
     if study == "inverse_design"
+        ENV["AUTODIFF"] = 1
         targets = fmap(F, targets)
         # targets = sortkeys(targets)
         if isfile(SOL)
@@ -84,7 +84,6 @@ function picrun(path, array=Array; kw...)
 
     boundaries = [] # unspecified boundaries default to PML
 
-    λ = F(λ)
     runs = [SortedDict([k => isa(v, AbstractDict) ? SortedDict(v) : v for (k, v) = pairs(run)]) for run in runs]
     runs_sources = [
         begin
@@ -99,7 +98,7 @@ function picrun(path, array=Array; kw...)
                 end
                 λmodenums = SortedDict([(F(λ)) => v for (λ, v) in pairs(wavelength_mode_numbers)])
 
-                push!(sources, Source(center, dimensions, frame, λ; λmodenums, port, wavelength_mode_numbers, label="s$(string(port)[2:end])"))
+                push!(sources, Source(center, dimensions, frame; λmodenums, port, wavelength_mode_numbers, label="s$(string(port)[2:end])"))
             end
             sources
         end for run in runs
@@ -117,7 +116,7 @@ function picrun(path, array=Array; kw...)
             end
             λmodenums = SortedDict([F(λ) => v for (λ, v) in pairs(m.wavelength_mode_numbers)])
 
-            Monitor(center, dimensions, frame, λ; λmodenums, port, label="m$(string(port)[2:end])", wavelength_mode_numbers)
+            Monitor(center, dimensions, frame; λmodenums, port, label="m$(string(port)[2:end])", wavelength_mode_numbers)
         end for (port, m) = SortedDict(run.monitors) |> pairs] for run in runs]
     if study == "inverse_design"
         canvases = map(enumerate(canvases)) do (i, c)
@@ -131,7 +130,7 @@ function picrun(path, array=Array; kw...)
             swaps = kvmap(swaps) do k, v
                 Symbol(togreek(k)) => v
             end
-            Canvas(swaps, stack(c.bbox), lvoid, lsolid, symmetries, λ; params)
+            Canvas(swaps, stack(c.bbox), lvoid, lsolid, symmetries; params)
         end
     else
         canvases = []
@@ -139,7 +138,7 @@ function picrun(path, array=Array; kw...)
     probs =
         [
             begin
-                setup(bbox / λ, nres, boundaries, sources, monitors, canvases;
+                setup(λ, bbox, nres, boundaries, sources, monitors, canvases;
                     pmlfracs=[1, 1, 0.2], approx_2D_mode, z, array,
                     F, ϵ, TEMP, Ttrans, Tss)
             end for (i, (run, sources, monitors)) in enumerate(zip(runs, runs_sources, runs_monitors))
@@ -167,7 +166,6 @@ function picrun(path, array=Array; kw...)
         end
     elseif study == "inverse_design"
         PLOT = joinpath(path, "sim.png")
-        ENV["autodiff"] = "1"
         if N == 3
             if magic != "summersale"
                 error("3D inverse design feature must be requested from Luminescent AI info@luminescentai.com")

@@ -8,7 +8,7 @@ struct Canvas
     params
 end
 Base.ndims(c::Canvas) = size(c.bbox, 1)
-function Canvas(swaps, bbox, lvoid, lsolid, symmetries, λ; ratio=4, params=nothing)
+function Canvas(swaps, bbox, lvoid, lsolid, symmetries; ratio=4, params=nothing)
     symmetries = map(symmetries) do s
         try
             Int(s) + 1
@@ -20,7 +20,7 @@ function Canvas(swaps, bbox, lvoid, lsolid, symmetries, λ; ratio=4, params=noth
             end
         end
     end
-    Canvas(swaps, bbox / λ, lvoid / λ, lsolid / λ, symmetries, ratio, params)
+    Canvas(swaps, bbox, lvoid, lsolid, symmetries, ratio, params)
 end
 struct CanvasInstance
     swaps
@@ -29,9 +29,13 @@ struct CanvasInstance
     model
 end
 Base.ndims(c::CanvasInstance) = length(c.start)
-function CanvasInstance(canvas, grid, geometry; z=nothing)
+function CanvasInstance(canvas, λ, grid; z=nothing)
     @unpack swaps, bbox, lvoid, lsolid, symmetries, ratio, params = canvas
     @unpack rulers, deltas, F = grid
+
+    bbox /= λ
+    lvoid /= λ
+    lsolid /= λ
 
     N = ndims(canvas)
     rulers = rulers.default

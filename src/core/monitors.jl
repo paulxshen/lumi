@@ -12,12 +12,9 @@ mutable struct Monitor <: AbstractMonitor
     tags
 end
 
-function Monitor(center, dimensions, frame, λ=1; λmodenums=nothing, λsmode=nothing, λmodes=nothing, tags...)
-    center /= λ
-    dimensions /= λ
-    λmodenums = kvmap((k, v) -> (k / λ, v), λmodenums)
+function Monitor(center, dimensions, frame; λmodenums=nothing, λsmode=nothing, λmodes=nothing, tags...)
     tags = OrderedDict(tags)
-
+    tags[:center] = center
     Monitor(λmodenums, λsmode, λmodes, center, dimensions, frame, tags)
 end
 
@@ -56,12 +53,11 @@ area(m::MonitorInstance) = m.v
 wavelengths(m::MonitorInstance) = keys(m.λmodes)
 Base.length(m::MonitorInstance) = 1
 
-function MonitorInstance(m::Monitor, g, ϵ, TEMP; z=nothing, mode_solutions=nothing)
-    @unpack λmodes, _λmodes, box_rulers, bbox, box_deltas, I, plane_deltas, plane_Is, = _get_λmodes(m, ϵ, TEMP, mode_solutions, g; z)
+function MonitorInstance(m::Monitor, λ, g, ϵ, TEMP; z=nothing, mode_solutions=nothing)
+    @unpack λmodes, _λmodes, box_rulers, bbox, box_deltas, I, plane_deltas, plane_Is, = _get_λmodes(m, λ, ϵ, TEMP, mode_solutions, g; z)
     @unpack F = g
-    @unpack tags, frame, center = m
-    frame, center = F.((frame, center))
-    tags[:center] = center
+    @unpack tags, frame, = m
+    frame, = F.((frame,))
     MonitorInstance(frame, I, box_deltas, plane_Is, plane_deltas, λmodes, _λmodes, tags)
 end
 

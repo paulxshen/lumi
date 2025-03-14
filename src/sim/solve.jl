@@ -6,7 +6,7 @@ function bell(t, dt, u=nothing)
         # end
 
         if floor(t + 0.001) > floor(t - dt + 0.001)
-            ENV["autodiff"] == "0" && t > 0.1 && println("period $(int(t)),  $(timepassed()|>disp) s")
+            !AUTODIFF() && t > 0.1 && println("period $(int(t)),  $(timepassed()|>disp) s")
         end
         if !haskey(ENV, "t0")
             ENV["t0"] = time()

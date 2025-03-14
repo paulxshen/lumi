@@ -45,7 +45,8 @@ function plotfield(args...; axis=(;), rulers, labels=[], kwargs...)
 end
 function plotsim(prob, sol, field_names=[:Hz], geometry_names=[:ϵ]; path=nothing)
     fig = Figure()
-    rulers = prob.grid.rulers
+    @unpack λ = prob
+    rulers = prob.grid.rulers * λ
     labels = map(vcat(prob.source_instances, prob.monitor_instances)) do x
         @unpack center, label = x.tags
         (center, label)

@@ -1,4 +1,4 @@
-using UnPack, LinearAlgebra, Statistics, Random, Jello, DataStructures, FileIO, Porcupine, Dates, NPZ, DataStructures, JSON, Flux, Zygote, CairoMakie, ArrayPadding, Permutations, Functors, Optimisers, ChainRulesCore, SparseArrays, Interpolations, Unitful
+using UnPack, LinearAlgebra, Statistics, Random, Jello, DataStructures, FileIO, Porcupine, Dates, NPZ, DataStructures, JSON, Flux, Zygote, CairoMakie, ArrayPadding, Permutations, Functors, Optimisers, ChainRulesCore, SparseArrays, Interpolations, CUDA, Unitful
 using Meshes, GeoIO
 using Meshes: Point, boundingbox, Box
 # using GeometryBasics, MeshIO

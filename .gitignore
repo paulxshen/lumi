@@ -8,3 +8,8 @@ env/
 *.pyc
 Manifest.toml
 .vscode
+
+.whl
+.oas
+.egg-info
+dist/

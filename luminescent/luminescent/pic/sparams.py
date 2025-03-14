@@ -19,6 +19,7 @@ def make_prob(path, c, nres,
 
               wavelength=None,
               wl_res=.01,
+              source_port_margin=.1,
               **kwargs):
     # c.show()
     # raise NotImplementedError("This is a stub")
@@ -85,6 +86,7 @@ def make_prob(path, c, nres,
 
     prob = setup(path, c, study=study,  nres=nres, center_wavelength=center_wavelength,
                  runs=runs,
+                 source_port_margin=source_port_margin,
                  layer_stack=layer_stack, **kwargs)
     prob["wavelengths"] = wavelengths
     prob["Tss"] = T if len(wavelengths) > 1 else None

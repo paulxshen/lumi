@@ -7,7 +7,7 @@ _pmlfracs(a::Real, N) = fill(a, (N, 2))
 _pmlfracs(a::AbstractVector, N) = stack([a[1:N], a[1:N]])
 
 
-function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
+function setup(λ, bbox, nres, boundaries, sources, monitors, canvases=[];
     approx_2D_mode=nothing, z=nothing,
     Ttrans=nothing, Tss=nothing, Tssmin=nothing,
     ϵ=1, μ=1, σ=0, m=0, γ=0, β=0,
@@ -19,10 +19,17 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
 )
     println("setting up simulation...")
 
-    relcourant = F(relcourant)
-    bbox, nres, = F.((bbox, nres,))
+    bbox /= λ
+    if !isnothing(z)
+        z /= λ
+    end
+
+    bbox, nres, relcourant = F.((bbox, nres, relcourant))
 
     T = Float32
+    ϵ = map(ϵ) do (m, v)
+        isnothing(m) ? m : m |> Scale(1 / λ, 1 / λ, 1 / λ), v
+    end
     rulers = makemesh([(m, sqrt(v) |> T) for (m, v) = ϵ], bbox |> T, nres |> T) |> F
 
     deltas = diff.(rulers)
@@ -331,10 +338,10 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
 
     println("making sources...")
     mode_solutions = []
-    source_instances = SourceInstance.(sources, (grid,), (ϵ,), (TEMP,); z, mode_solutions,)
+    source_instances = SourceInstance.(sources, λ, (grid,), (ϵ,), (TEMP,); z, mode_solutions,)
     println("making monitors...")
-    monitor_instances = MonitorInstance.(monitors, (grid,), (ϵ,), (TEMP,); z, mode_solutions,)
-    canvas_instances = CanvasInstance.(canvases, (grid,), (geometry,), ; z)
+    monitor_instances = MonitorInstance.(monitors, λ, (grid,), (ϵ,), (TEMP,); z, mode_solutions,)
+    canvas_instances = CanvasInstance.(canvases, λ, (grid,); z)
 
     if N == 2
         # geometry[:ϵ] = downsample(_geometry.ϵ, int(deltas / dl))
@@ -376,7 +383,7 @@ function setup(bbox, nres, boundaries, sources, monitors, canvases=[];
     load = nt * nv
 
     global prob = (;
-                      grid,
+                      grid, λ,
                       source_instances, monitor_instances, canvas_instances,
                       field_names, approx_2D_mode,
                       Ttrans, Tss,

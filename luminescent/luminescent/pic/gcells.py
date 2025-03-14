@@ -14,7 +14,7 @@ from gdsfactory.generic_tech import LAYER_STACK, LAYER
 def mimo(west=0, east=0, south=0, north=0,
          l=2.0, w=2.0, wwg=.5, lwg=None, taper=0,
          wwg_west=None, wwg_east=None, wwg_south=None, wwg_north=None,
-         wwg_layer=LAYER.WG,  # bbox_layer=LAYER.WAFER,
+         wwg_layer=LAYER.WG,  # BBOX=LAYER.WAFER,
          CANVAS_LAYER=CANVAS_LAYER,
          **kwargs):
     design = gf.Component()

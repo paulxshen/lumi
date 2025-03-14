@@ -32,12 +32,9 @@ mutable struct Source
     tags
 end
 
-function Source(center, dimensions, frame, λ=1; λmodenums=nothing, λsmode=nothing, λmodes=nothing, tags...)
-    center /= λ
-    dimensions /= λ
-    λmodenums = kvmap((k, v) -> (k / λ, v), λmodenums)
+function Source(center, dimensions, frame; λmodenums=nothing, λsmode=nothing, λmodes=nothing, tags...)
     tags = OrderedDict(tags)
-
+    tags[:center] = center
     Source(λmodenums, λsmode, λmodes, center, dimensions, frame, tags)
 end
 
@@ -121,14 +118,15 @@ function SourceInstance(s::PlaneWave, g)
     SourceInstance(Source(sigmodes, dimensions / 2, -dimensions / 2, dimensions / 2, getdimsperm(dims), tags), g)
 end
 
-function SourceInstance(s::Source, g, ϵ, TEMP; z=nothing, mode_solutions=nothing)
-    @unpack tags, center, frame = s
+function SourceInstance(s::Source, λ, g, ϵ, TEMP; z=nothing, mode_solutions=nothing)
+    @unpack tags, frame = s
     @unpack F, sizes = g
+
     C = complex(F)
     N = ndims(s)
 
     @unpack λmodes, _λmodes, box_size, bbox, box_deltas, I, plane_points, plane_Is, =
-        _get_λmodes(s, ϵ, TEMP, mode_solutions, g; z)
+        _get_λmodes(s, λ, ϵ, TEMP, mode_solutions, g; z)
 
     λs = @ignore_derivatives Array(keys(λmodes))
     modess = values(λmodes)
@@ -190,7 +188,6 @@ function SourceInstance(s::Source, g, ϵ, TEMP; z=nothing, mode_solutions=nothin
                 end for k = sort(keys(mode))])
             (f, mode)
         end for (sig, mode) = sigmodes]
-    tags[:center] = center
     SourceInstance(sigmodes, tags)
 end
 
@@ -212,9 +209,13 @@ function EH2JM(d::T) where {T}
     dict(Pair.(replace(keys(d), :Ex => :Jx, :Ey => :Jy, :Ez => :Jz, :Hx => :Mx, :Hy => :My, :Hz => :Mz), values(d)))
 end
 
-function _get_λmodes(sm, ϵ, TEMP, mode_solutions, g; z)
+function _get_λmodes(sm, λ, ϵ, TEMP, mode_solutions, g; z)
     @unpack center, dimensions, tags, frame, λmodenums, λmodes, λsmode = sm
     @unpack F, sizes, rulers, all_field_names, offsets, dx = g
+
+    center /= λ
+    dimensions /= λ
+    λmodenums = kvmap((k, v) -> (k / λ, v), λmodenums)
 
     center, dimensions, frame = F.([center, dimensions, frame])
     N = ndims(sm)

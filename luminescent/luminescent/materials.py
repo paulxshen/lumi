@@ -92,4 +92,4 @@ SOI = LayerStack(layers=layers)
 SOI.layers['default'] = {
     'material': 'SiO2'
 }
-BBOX_LAYER = (8888, 8888)
+BBOX = (8888, 8888)

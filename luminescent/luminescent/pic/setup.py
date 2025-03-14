@@ -18,7 +18,6 @@ from gdsfactory.generic_tech import LAYER_STACK, LAYER
 
 
 def setup(path, c, study, nres, center_wavelength,
-          bbox_layer=BBOX_LAYER,
           zlims=None, core_layer=LAYER.WG,
           port_margin="auto",
           runs=[],  sources=[],
@@ -28,6 +27,7 @@ def setup(path, c, study, nres, center_wavelength,
           gpu=None, dtype=np.float32,
           plot=False, framerate=None,
           magic="", wd=os.path.join(os.getcwd(), "runs"), name=None,
+          source_port_margin=.1,
           Ttrans=None,
           approx_2D_mode=False):
     materials = {**MATERIALS, **materials}
@@ -82,37 +82,13 @@ def setup(path, c, study, nres, center_wavelength,
     h = hcore+2*zmargin
     zmin = zcore-zmargin
     zmax = zmin+h
-
-    source_ports = []
-    nonsource_ports = []
-    for p in c.ports:
-        is_source = False
-        for run in runs:
-            for port in run["sources"]:
-                if port == p.name:
-                    is_source = True
-        if is_source:
-            source_ports.append(p.name)
-        else:
-            nonsource_ports.append(p.name)
 #
     port_width = max([p.width/1e0 for p in c.ports])
     ps = portsides(c)
     xmargin = ymargin = 2*port_width
 
-    source_port_margin = 2 * port_width if N == 2 else 6*port_width
-
-    port_margin = center_wavelength/nres
-    margins = []
-    for p in ps:
-        if set(p).intersection(source_ports):
-            margins.append(source_port_margin+port_margin)
-        elif set(p).intersection(nonsource_ports):
-            margins.append(port_margin)
-        else:
-            assert not p
-            margins.append(xmargin)
-
+    # source_port_margin = .9*maxmargin
+    # source_port_margin = 2 * port_width if N == 2 else 6*port_width
     #
     modexmargin = .6*xmargin
     modezmargin = .6*zmargin
@@ -126,21 +102,6 @@ def setup(path, c, study, nres, center_wavelength,
     prob["zmax"] = zmax
     prob["zcore"] = zcore
     # prob["L"] = [l, w, h]
-
-    _c = gf.Component()
-    kwargs = dict()
-    for (orientation, side, length, p) in zip([0, 90, 180, 270], ["right", "top", "left", "bottom"], margins, ps):
-        if p:
-            c = gf.components.extend_ports(
-                c, None, length, orientation=orientation)
-        else:
-            kwargs[side] = length
-    _c << gf.components.bbox(component=c, layer=bbox_layer, **kwargs)
-    # _c = gf.Component()
-    _c << c
-    c = _c
-    # c.plot()
-    # c.show()
 
     layers = set(c.layers)-set(exclude_layers)
 
@@ -171,7 +132,7 @@ def setup(path, c, study, nres, center_wavelength,
     prob["zmode"] = zmode
     wmode = port_width+2*modexmargin
     wavelengths = []
-    # _c = add_bbox(c, layer=bbox_layer, nonport_margin=margin)
+    # _c = add_bbox(c, layer=BBOX, nonport_margin=margin)
     for run in runs:
         for k, v in list(run["sources"].items())+list(run["monitors"].items()):
             p = ports[k]
