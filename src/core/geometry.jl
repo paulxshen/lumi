@@ -97,8 +97,8 @@ function supersamplemesh(meshvals::AbstractVector{<:Tuple}, rulers; tensor=false
         Δ = stop - start
 
         if inv && tensor && big
-            start = start - Δ / 2
-            stop = stop + Δ / 2
+            start = start - Δ / 4
+            stop = stop + Δ / 4
             start .= max.(start, first.(rulers))
             stop .= min.(stop, last.(rulers))
             Δ = stop - start
