@@ -18,9 +18,9 @@ function picrun(path)
     s = read(io, String)
     prob = JSON.parse(s; dicttype=OrderedDict)
     # merge!(prob, kw)
-    for (k, v) = pairs(kw)
-        prob[string(k)] = v
-    end
+    # for (k, v) = pairs(kw)
+    #     prob[string(k)] = v
+    # end
     @unpack name, N, approx_2D_mode, dtype, center_wavelength, runs, ports, study, zmin, zmax, zcenter, magic, framerate, layer_stack, materials, Ttrans, Tss, bbox, epdefault, nres = prob
     if nres > 8
         error("nres must be <= 8 in free version")
